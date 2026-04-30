@@ -1,0 +1,26 @@
+{
+  "name": "CAREPATH AI",
+  "short_name": "CarePath",
+  "description": "Doctor-first care plan execution platform with AI-powered clinical extraction",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f4ff",
+  "theme_color": "#1a6dd4",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "permissions": [
+    "microphone",
+    "notifications"
+  ]
+}
