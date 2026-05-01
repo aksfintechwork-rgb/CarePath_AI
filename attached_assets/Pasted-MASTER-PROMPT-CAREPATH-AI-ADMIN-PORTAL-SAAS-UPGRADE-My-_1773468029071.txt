@@ -1,0 +1,362 @@
+MASTER PROMPT – CAREPATH AI ADMIN PORTAL SAAS UPGRADE
+
+My application CarePath AI is already built and running.
+Now I want to upgrade the Admin Portal to support a complete SaaS subscription management system for doctors, clinics, and hospitals.
+
+The goal is to make the platform scalable globally with India and Global pricing tiers, usage tracking, billing, and feature access control.
+
+Do NOT rebuild the application.
+Extend the existing architecture and database.
+
+1. ADMIN PORTAL OVERVIEW
+
+Create an advanced Admin Control Panel where the super admin can manage:
+
+• Subscription plans
+• Doctor/clinic accounts
+• Feature access
+• AI transcription usage
+• Billing and invoices
+• Regional pricing
+• Platform analytics
+
+The Admin dashboard must show real-time platform metrics and allow full SaaS management.
+
+2. ADMIN DASHBOARD (MAIN SCREEN)
+
+Create a modern dashboard showing key platform analytics.
+
+Widgets required:
+
+• Total Registered Doctors
+• Active Subscriptions
+• Trial Accounts
+• Expired Subscriptions
+• Monthly Recurring Revenue (MRR)
+• AI Transcription Minutes Used Today
+• AI Minutes Used This Month
+• Total Clinics Using Platform
+• Top Subscription Plans
+
+Charts required:
+
+• Monthly Revenue Growth
+• Subscription Plan Distribution
+• AI Usage Trends
+• Country-wise User Distribution
+• Doctor Growth Rate
+
+3. SUBSCRIPTION PLAN MANAGEMENT
+
+Create a Plan Management section where the admin can create and manage pricing tiers.
+
+Admin must be able to:
+
+• Create new plans
+• Edit existing plans
+• Activate / deactivate plans
+• Clone plans
+• Create region-specific pricing
+
+Plans to support:
+
+Starter
+Professional
+Clinic Pro
+Enterprise
+
+4. PLAN CONFIGURATION FIELDS
+
+Each plan must include the following fields.
+
+General Plan Information
+
+Plan Name
+Plan Type (India / Global)
+Monthly Price
+Annual Price
+Currency
+Plan Status (Active / Disabled)
+
+Doctor Limits
+
+Doctors Included
+Maximum Doctors Allowed
+
+AI Usage Limits
+
+AI Transcription Minutes per Month
+Extra Minute Cost
+
+Languages
+
+Number of Languages Supported
+Custom Language Support
+
+AI Care Plan Capability
+
+Basic AI
+Advanced AI
+Advanced + Custom
+Fully Custom
+
+Prescription Sharing Channels
+
+Email
+WhatsApp
+SMS
+All Channels
+White-label
+
+Calendar Features
+
+Basic Calendar
+Smart Scheduling
+Multi Doctor Calendar
+Full Hospital Integration
+
+Reports & Analytics
+
+Monthly Reports
+Weekly Reports
+Daily Reports
+Custom Analytics Dashboard
+
+Identity Verification
+
+Aadhaar Scan Support
+Government ID Support
+
+Medication Adherence Tracking
+
+Disabled
+Basic Tracking
+Advanced Tracking with Alerts
+Full Adherence Suite
+
+Support Level
+
+Email Support
+Chat + Email
+Priority Phone Support
+Dedicated Account Manager
+
+Target User
+
+Solo Doctor
+Small Clinic
+Multi Doctor Clinic
+Hospital Chain
+
+5. GLOBAL PRICING ENGINE
+
+Create a regional pricing multiplier system.
+
+Admin should configure region multipliers:
+
+North America – 1.0x
+Europe – 0.9x
+Middle East – 0.85x
+Southeast Asia – 0.5x
+Africa – 0.35x
+India / South Asia – 0.25x
+
+System should automatically calculate final pricing.
+
+Example:
+
+Base price = $49
+Europe = $49 × 0.9
+
+6. DOCTOR SUBSCRIPTION MANAGEMENT
+
+Admin must see all doctors and clinics using CarePath AI.
+
+Fields required:
+
+Doctor Name
+Clinic Name
+Email
+Phone Number
+Country
+Subscription Plan
+Subscription Start Date
+Next Billing Date
+Doctors Allowed
+Doctors Used
+AI Minutes Used
+AI Minutes Remaining
+Billing Cycle (Monthly / Annual)
+Subscription Status (Active / Trial / Expired / Cancelled)
+
+Admin actions:
+
+• Change plan
+• Upgrade plan
+• Downgrade plan
+• Suspend account
+• Cancel subscription
+
+7. AI USAGE TRACKING SYSTEM
+
+Create a system that tracks:
+
+AI transcription minutes per doctor.
+
+Dashboard must show:
+
+Minutes used today
+Minutes used this month
+Remaining minutes
+Extra minutes consumed
+Extra cost generated
+
+When limit is exceeded:
+
+System must calculate extra charges automatically.
+
+8. BILLING & INVOICE MANAGEMENT
+
+Admin must manage billing.
+
+Features required:
+
+Generate invoices automatically
+Download invoice PDF
+Payment tracking
+Refund system
+Coupon / discount management
+
+Fields:
+
+Invoice ID
+Doctor / Clinic Name
+Plan
+Billing Period
+Amount
+Payment Status
+Payment Date
+
+9. FEATURE ACCESS CONTROL SYSTEM
+
+Each subscription plan should automatically control platform features.
+
+Example:
+
+Starter Plan
+
+• 300 AI minutes
+• 5 languages
+• Email prescription sharing
+• Basic reports
+
+Professional Plan
+
+• 1000 AI minutes
+• 20 languages
+• WhatsApp + Email sharing
+• Smart scheduling
+
+Clinic Pro
+
+• 3000 AI minutes
+• 50 languages
+• Multi doctor calendar
+• Advanced analytics
+
+Enterprise
+
+• Unlimited AI minutes
+• Unlimited doctors
+• Custom integrations
+• White label branding
+
+System must enforce feature access automatically.
+
+10. ENTERPRISE PLAN MANAGEMENT
+
+Allow admin to create custom enterprise plans.
+
+Fields:
+
+Unlimited doctors
+Unlimited AI minutes
+Custom integrations
+Dedicated support
+White label option
+Custom pricing
+
+11. PLATFORM ANALYTICS
+
+Create a powerful analytics section showing:
+
+Monthly revenue
+Plan popularity
+Doctor growth
+AI usage trends
+Country distribution
+Top clinics using platform
+
+12. SECURITY & ACCESS CONTROL
+
+Admin portal must support:
+
+Role-based access
+
+Roles:
+
+Super Admin
+Finance Admin
+Operations Admin
+Support Admin
+
+Each role must have limited permissions.
+
+13. USER INTERFACE REQUIREMENTS
+
+Admin portal UI must be:
+
+Modern SaaS dashboard
+Responsive design
+Fast loading
+Clean analytics layout
+Professional charts
+
+Use clear navigation:
+
+Dashboard
+Subscriptions
+Doctors
+Billing
+Usage
+Plans
+Analytics
+Settings
+
+14. DATABASE CHANGES
+
+Update database to support:
+
+Subscription plans
+Regional pricing
+Usage tracking
+Billing records
+Invoices
+Plan features
+
+Ensure database structure supports scalable SaaS growth.
+
+15. PERFORMANCE & SCALABILITY
+
+The system must support:
+
+10,000+ doctors
+Multiple countries
+Large AI transcription usage
+Real-time usage tracking
+
+Design architecture accordingly.
+
+FINAL GOAL
+
+The Admin Portal should behave like a full SaaS control system similar to platforms like Notion, Slack, or HubSpot, enabling CarePath AI to manage global doctor subscriptions efficiently.

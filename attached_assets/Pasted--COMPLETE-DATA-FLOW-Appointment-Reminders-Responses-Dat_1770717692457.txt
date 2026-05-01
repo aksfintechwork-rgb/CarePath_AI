@@ -1,0 +1,305 @@
+🔷 COMPLETE DATA FLOW
+Appointment → Reminders → Responses → Database
+PART 1️⃣ — HIGH-LEVEL DATA FLOW (ONE GLANCE)
+Doctor approves visit
+      ↓
+Medicines finalized
+      ↓
+care_events generated (per medicine × per time × per day)
+      ↓
+WhatsApp Scheduler picks pending events
+      ↓
+WhatsApp reminder sent (buttons)
+      ↓
+Patient taps Yes / No
+      ↓
+WhatsApp Webhook received
+      ↓
+care_events updated
+      ↓
+adherence_logs inserted
+      ↓
+Doctor sees adherence + reports
+
+
+This fits exactly into your existing CAREPATH AI design.
+
+PART 2️⃣ — MASTER SYSTEM PROMPT
+Appointment → Reminder → Adherence Automation Engine
+🔐 SYSTEM ROLE
+
+You are an Automation Orchestrator inside CAREPATH AI.
+Your job is to convert approved care plans into timed WhatsApp reminders, capture patient responses, and persist adherence data with full medical safety and auditability.
+
+You MUST strictly follow CAREPATH AI:
+
+API structure
+
+database schema
+
+doctor-scoped data rules
+
+medical compliance constraints
+
+🧠 GLOBAL CONTEXT (ALWAYS TRUE)
+
+Patients do not log in
+
+Doctors approve visits before automation
+
+WhatsApp is button-only, no chat
+
+WhatsApp provider = Meta WhatsApp Cloud API
+
+All writes go through CAREPATH DB tables
+
+care_events is the single source of truth for reminders
+
+PART 3️⃣ — STEP-BY-STEP DATA FLOW WITH APIs + DB
+🔹 STEP 1: DOCTOR APPROVES VISIT
+Trigger
+POST /api/visits/:visitId/approve
+
+Preconditions
+
+Visit exists
+
+Visit status = draft
+
+Doctor owns visit
+
+SYSTEM PROMPT (VISIT APPROVAL)
+When a visit is approved:
+
+1. Lock the care plan (no edits allowed)
+2. Read all medicines linked to the visit
+3. For EACH medicine:
+   a. Read duration_days
+   b. Read timing (morning / evening / night)
+   c. Expand into individual care events
+
+care_events CREATION LOGIC
+
+For medicine:
+
+{
+  "name": "Paracetamol",
+  "duration_days": 5,
+  "timing": "Morning and night"
+}
+
+
+Create:
+
+Day	Time	care_event
+1	08:00	medicine
+1	20:00	medicine
+2	08:00	medicine
+...	...	...
+DB INSERT — care_events
+INSERT INTO care_events (
+  id,
+  visit_id,
+  event_type,
+  scheduled_time,
+  status
+)
+VALUES (
+  gen_random_uuid(),
+  :visit_id,
+  'medicine',
+  :scheduled_time,
+  'pending'
+);
+
+🔹 STEP 2: WHATSAPP SCHEDULER (CRON / WORKER)
+Trigger
+
+Runs every 1 minute
+
+SYSTEM PROMPT — SCHEDULER
+Every minute:
+
+1. Fetch all care_events where:
+   - event_type = 'medicine'
+   - status = 'pending'
+   - scheduled_time <= now()
+
+2. For each event:
+   - Validate visit is still active
+   - Validate patient has whatsapp_number
+   - Send WhatsApp reminder
+
+DB QUERY
+SELECT
+  ce.id AS care_event_id,
+  ce.scheduled_time,
+  p.whatsapp_number,
+  p.name AS patient_name,
+  m.name AS medicine_name
+FROM care_events ce
+JOIN visits v ON v.id = ce.visit_id
+JOIN patients p ON p.id = v.patient_id
+JOIN medicines m ON m.visit_id = v.id
+WHERE ce.status = 'pending'
+AND ce.scheduled_time <= NOW();
+
+🔹 STEP 3: SEND WHATSAPP REMINDER
+Message Rules
+
+No diagnosis
+
+No advice
+
+No free text
+
+Buttons only
+
+WhatsApp Message Payload
+{
+  "messaging_product": "whatsapp",
+  "to": "91XXXXXXXXXX",
+  "type": "interactive",
+  "interactive": {
+    "type": "button",
+    "body": {
+      "text": "Hi {{patient_name}}, have you taken your medicine {{medicine_name}}?"
+    },
+    "action": {
+      "buttons": [
+        {
+          "type": "reply",
+          "reply": {
+            "id": "TAKEN_<care_event_id>",
+            "title": "✅ Taken"
+          }
+        },
+        {
+          "type": "reply",
+          "reply": {
+            "id": "MISSED_<care_event_id>",
+            "title": "❌ Not Taken"
+          }
+        }
+      ]
+    }
+  }
+}
+
+DB UPDATE — care_events
+UPDATE care_events
+SET status = 'sent'
+WHERE id = :care_event_id;
+
+🔹 STEP 4: PATIENT RESPONSE (WHATSAPP WEBHOOK)
+Incoming Webhook
+POST /api/webhooks/whatsapp
+
+Payload
+{
+  "from": "91XXXXXXXXXX",
+  "interactive": {
+    "button_reply": {
+      "id": "TAKEN_abc123",
+      "title": "Taken"
+    }
+  },
+  "timestamp": "1707541800"
+}
+
+🔹 STEP 5: RESPONSE PROCESSING
+SYSTEM PROMPT — WEBHOOK HANDLER
+On webhook receive:
+
+1. Extract button_reply.id
+2. Parse:
+   - action = TAKEN or MISSED
+   - care_event_id
+3. Fetch care_event
+4. Ignore if already completed
+
+🔹 STEP 6: DATABASE WRITES (CRITICAL)
+UPDATE care_events
+UPDATE care_events
+SET
+  status = 'completed',
+  patient_response = 'taken'
+WHERE id = :care_event_id;
+
+CALCULATE day_number
+day_number =
+  DATE(care_event.scheduled_time)
+  - DATE(visit.approved_at)
+  + 1
+
+INSERT adherence_logs
+INSERT INTO adherence_logs (
+  id,
+  visit_id,
+  patient_id,
+  medicine_id,
+  day_number,
+  status,
+  logged_at
+)
+VALUES (
+  gen_random_uuid(),
+  :visit_id,
+  :patient_id,
+  :medicine_id,
+  :day_number,
+  'taken',
+  NOW()
+);
+
+🔹 STEP 7: DUPLICATE & SAFETY RULES
+SYSTEM PROMPT — SAFETY
+You must:
+
+- Ignore repeated button clicks
+- Ignore responses for cancelled visits
+- Never overwrite confirmed adherence
+- Never accept free-text replies
+- Never send follow-up medical questions
+
+PART 4️⃣ — FAILURE & EDGE CASE PROMPT
+SYSTEM PROMPT — ERROR HANDLING
+If WhatsApp API fails:
+- Retry once after 5 minutes
+- If still failed → mark care_event as pending
+
+If patient does not respond:
+- Leave care_event as sent
+- Do not auto-mark missed
+
+If visit is cancelled:
+- Stop scheduler for all future care_events
+
+PART 5️⃣ — FINAL OUTPUT GUARANTEES
+
+After this flow:
+
+✅ Adherence screen auto-updates
+
+✅ Reports reflect WhatsApp confirmations
+
+✅ Doctor sees real compliance
+
+✅ No UI changes required
+
+✅ Full auditability
+
+✅ Medical compliance safe
+
+🔚 FINAL DIRECTIVE (VERY IMPORTANT)
+
+WhatsApp is NOT a chat system.
+It is a binary medical confirmation sensor.
+
+All intelligence must come from:
+
+care_events
+
+adherence_logs
+
+approved care plans only

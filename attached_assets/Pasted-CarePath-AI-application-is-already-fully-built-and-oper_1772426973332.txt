@@ -1,0 +1,170 @@
+CarePath AI application is already fully built and operational.
+
+Now implement the following feature upgrades without disturbing existing core consultation, prescription, and patient management modules.
+
+All updates must be modular, backward-compatible, and integrated into current workflow.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+UPDATE 1: Alternative Medicine Suggestions (Enhancement)
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Enhance existing prescription module:
+
+When a doctor prescribes a medicine:
+
+1. Automatically generate:
+   - Generic equivalent
+   - 2–3 brand alternatives
+   - Lower-cost option
+   - Same salt composition variations
+
+2. Display alternatives under each prescribed medicine:
+   “Alternative Options Available”
+
+3. Allow:
+   - One-click replacement
+   - Price comparison
+   - Availability status
+   - View salt composition
+
+4. Do not modify existing prescription structure.
+Extend it safely.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+UPDATE 2: Mandatory Patient History on First Visit
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Modify patient onboarding workflow:
+
+If it is the patient's first visit:
+- Force completion of detailed medical history before consultation.
+
+Required fields:
+- Past illnesses
+- Chronic diseases
+- Allergies
+- Current medications
+- Family history
+- Lifestyle habits
+- Previous surgeries
+- Pregnancy status (if applicable)
+
+For returning patients:
+- Auto-load history.
+- AI must reference history before generating prescription.
+
+Add validation layer:
+If prescribed medicine conflicts with history → show alert.
+
+Do not break existing visit logs.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+UPDATE 3: Medicine Intelligence Integration (TATA 1MG Type)
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Integrate external medicine intelligence layer into prescription flow:
+
+Capabilities:
+- Fetch medicine details
+- Fetch brand alternatives
+- Fetch generic equivalents
+- Check stock availability
+- Compare price ranges
+
+Workflow:
+Prescription → Medicine Validation Layer → Alternatives → Risk Engine → Final Submit
+
+If external API fails:
+Fallback to internal database automatically.
+
+Ensure system does not stop working if API is down.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+UPDATE 4: Pathology & Diagnostic Integration
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Enhance test recommendation module:
+
+When doctor recommends tests:
+- Map to structured test catalog
+- Attach to patient visit
+- Allow lab booking
+- Store uploaded reports
+- Extract key values automatically
+- Highlight abnormal markers
+- Compare with previous reports
+
+Reports must:
+- Become part of patient medical intelligence
+- Be usable in future AI analysis
+
+Keep existing “Tests” UI intact and extend it.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+UPDATE 5: AI-Based Risk & Side Effect Engine (Pre-Submission Layer)
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before final prescription submission:
+
+Run automated AI validation using:
+- Patient history
+- Allergies
+- Chronic conditions
+- Current medications
+- Age & gender
+- Newly prescribed medicines
+
+Detect:
+- Drug-drug interactions
+- Drug-disease conflicts
+- Allergy risks
+- Pregnancy risks
+- Liver/kidney risk factors
+- High-risk combinations
+
+Return structured result:
+- Risk Level: Low / Moderate / High
+- Flagged Medicines
+- Explanation
+- Clear Doctor Alert Message
+
+If Risk = High:
+Block final submission unless doctor confirms override.
+
+Show UI Alert:
+“⚠ Potential Risk Detected – Review Required”
+
+Log:
+- Alert shown
+- Doctor action
+- Override confirmation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+SYSTEM RULES FOR UPDATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Do not rewrite entire system.
+2. Extend existing modules safely.
+3. Maintain database compatibility.
+4. Add audit logs for new actions.
+5. Ensure patient data security.
+6. Maintain performance efficiency.
+7. Preserve existing UI layout and enhance it minimally.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+DELIVERABLES REQUIRED
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generate:
+- Required database extensions (only new tables/fields)
+- Updated workflow logic
+- Middleware layer design
+- AI validation flow
+- Alternative medicine generation logic
+- Risk analysis logic
+- Lab integration logic
+- Updated end-to-end prescription lifecycle
+- Sample JSON structures
+- Integration flow diagram explanation
+
+Implement this as a production-grade upgrade for a live HealthTech SaaS system.

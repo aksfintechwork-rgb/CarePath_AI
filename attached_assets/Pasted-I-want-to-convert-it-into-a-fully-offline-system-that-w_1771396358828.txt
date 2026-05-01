@@ -1,0 +1,143 @@
+I want to convert it into a fully offline system that works without any internet connection.
+
+⚠️ IMPORTANT REQUIREMENTS:
+
+The entire system must run locally on one computer.
+
+No external API calls (no OpenAI API, no cloud AI).
+
+All AI, voice-to-text, prescription generation, and database must work offline.
+
+The system must run using localhost.
+
+The doctor should only login and use the app normally.
+
+All features and modules must work exactly the same as online mode.
+
+SYSTEM REQUIREMENTS
+
+Create a complete offline architecture with:
+
+1️⃣ Local Backend
+
+Node.js or Python (choose best option)
+
+REST API structure
+
+Runs on http://localhost:3000
+
+2️⃣ Local Database
+
+Use PostgreSQL (preferred) or SQLite
+
+All patient records stored locally
+
+Proper schema for:
+
+Users
+
+Patients
+
+Appointments
+
+Voice transcripts
+
+Prescriptions
+
+Medical history
+
+3️⃣ Offline LLM for AI Prescription
+
+Use Ollama to run a local model.
+
+Install Ollama
+
+Use Mistral 7B (quantized) OR Phi-3 Mini
+
+Connect backend to:
+http://localhost:11434/api/generate
+
+Create:
+
+AI prescription generation endpoint
+
+SOAP note generation
+
+Conversation summarization
+
+No internet usage allowed.
+
+4️⃣ Offline Voice-to-Text
+
+Use Open-source Whisper locally.
+
+Install whisper (Python version)
+
+Create API endpoint:
+/transcribe-audio
+
+Accept audio file
+
+Return text transcript
+
+Store transcript in database
+
+Must work fully offline.
+
+5️⃣ Application Structure
+
+Create full folder structure:
+
+/backend
+/frontend
+/database
+/ai
+/voice
+
+Include:
+
+Environment variables
+
+Setup script
+
+Installation guide
+
+Run instructions
+
+OFFLINE MODE RULES
+
+Disable any cloud API logic
+
+Remove external dependencies requiring internet
+
+If internet exists, system must still function without using it
+
+All AI inference must be local
+
+OUTPUT REQUIRED
+
+Provide:
+
+Full backend code
+
+Database schema
+
+Ollama integration code
+
+Whisper integration code
+
+Installation step-by-step guide
+
+Run commands
+
+Testing instructions
+
+The final result must allow:
+
+Doctor opens browser
+Visits http://localhost:3000
+
+Logs in
+Uses voice
+Gets prescription generated
+All without internet

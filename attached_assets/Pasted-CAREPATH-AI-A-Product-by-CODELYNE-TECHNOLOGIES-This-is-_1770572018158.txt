@@ -1,0 +1,431 @@
+CAREPATH AI
+A Product by CODELYNE TECHNOLOGIES
+
+This is written exactly in the way Replit AI / Replit Agent understands best:
+✔ role clarity
+✔ strict scope
+✔ database + API + AI logic
+✔ no ambiguity
+✔ production-ready thinking
+
+You can paste this as-is into Replit AI.
+
+🔥 REPLIT MASTER PROMPT (MICRO-LEVEL)
+PROJECT NAME
+
+CAREPATH AI – Doctor Conversation → Executed Care Journey
+
+ROLE
+
+You are a principal full-stack engineer + healthcare AI architect working for CODELYNE TECHNOLOGIES.
+
+You are building a production-ready MVP for an AI healthcare SaaS.
+
+This product is NOT an EHR.
+This product is NOT for diagnosis.
+This product is for care execution after consultation.
+
+Doctor approval is mandatory at every critical step.
+
+CORE GOAL (DO NOT DEVIATE)
+
+Convert doctor–patient conversation audio into a:
+
+Structured Care Plan
+
+Doctor-approved
+
+Automatically executed via WhatsApp
+
+Trackable by doctor
+
+The system must ensure:
+“What the doctor says → actually gets done by the patient.”
+
+SYSTEM OVERVIEW (VERY IMPORTANT)
+
+The system has 5 engines:
+
+Audio Capture Engine
+
+AI Extraction Engine
+
+Care Plan Engine
+
+Doctor Approval Engine
+
+Patient Execution Engine (WhatsApp)
+
+TECH STACK (FIXED – DO NOT CHANGE)
+Frontend
+
+React
+
+Tailwind CSS
+
+Tab-based UI
+
+Mobile-first
+
+Backend
+
+Python FastAPI
+
+REST APIs
+
+Async background tasks
+
+Database
+
+PostgreSQL
+
+SQLAlchemy ORM
+
+Alembic migrations
+
+AI
+
+Whisper (speech-to-text)
+
+LLM (for structured extraction)
+
+JSON-only output (strict)
+
+Messaging
+
+WhatsApp API (Twilio / mock service for MVP)
+
+DATABASE DESIGN (CREATE EXACTLY)
+TABLE: users (doctors)
+
+id (UUID)
+
+name
+
+email
+
+phone
+
+role (doctor/admin)
+
+clinic_name
+
+TABLE: patients
+
+id (UUID)
+
+name
+
+age
+
+gender
+
+phone
+
+known_conditions
+
+allergies
+
+created_at
+
+TABLE: visits
+
+id (UUID)
+
+patient_id
+
+doctor_id
+
+visit_date
+
+audio_path
+
+transcript_text
+
+ai_draft_json
+
+approved (boolean)
+
+approved_at
+
+status (draft / approved / active / completed)
+
+TABLE: medicines
+
+id
+
+visit_id
+
+name
+
+dose
+
+frequency
+
+timing
+
+duration_days
+
+instructions
+
+TABLE: tests
+
+id
+
+visit_id
+
+name
+
+when_to_do
+
+urgency
+
+trigger_condition
+
+fasting_required
+
+TABLE: followups
+
+id
+
+visit_id
+
+followup_after_days
+
+followup_date
+
+warning_signs
+
+notes
+
+TABLE: care_events (execution log)
+
+id
+
+visit_id
+
+event_type (medicine/test/followup)
+
+scheduled_time
+
+status (pending/sent/completed)
+
+patient_response
+
+FRONTEND SCREENS (DO NOT SKIP)
+SCREEN 1: Doctor Dashboard
+
+List of today’s patients
+
+Status badges:
+
+Draft
+
+Active Care
+
+Follow-up Due
+
+SCREEN 2: New Visit
+
+Fields:
+
+Patient name
+
+Age
+
+Phone
+
+Consent checkbox:
+
+“Patient consents to audio recording for medical documentation”
+
+Button:
+
+START RECORDING
+
+SCREEN 3: Recording Screen
+
+Audio waveform
+
+Timer
+
+STOP RECORDING button
+
+SCREEN 4: AI Processing Screen
+
+Show steps visually:
+
+Transcribing audio
+
+Extracting care plan
+
+Preparing draft
+
+SCREEN 5: Care Plan Editor (TABS)
+TAB 1: Complaint & History
+
+Editable fields.
+
+TAB 2: Medicines (Table)
+
+Doctor can add/edit/delete rows.
+
+TAB 3: Tests (Table)
+
+Doctor can modify urgency and timing.
+
+TAB 4: Follow-Up
+
+Date + warning signs.
+
+TAB 5: Patient Summary
+
+Simple English auto-generated text.
+
+SCREEN 6: Approve & Activate
+
+Buttons:
+
+SAVE AS DRAFT
+
+APPROVE & ACTIVATE CARE PATH
+
+⚠️ Approval locks the visit.
+
+AI EXTRACTION ENGINE (CRITICAL – READ CAREFULLY)
+INPUT TO AI
+
+Full transcript text
+
+Instruction: “Extract ONLY what doctor says. Do not invent.”
+
+OUTPUT FORMAT (STRICT JSON – NO TEXT)
+{
+  "complaint": "",
+  "duration_days": "",
+  "symptoms": [],
+  "medicines": [
+    {
+      "name": "",
+      "dose": "",
+      "frequency": "",
+      "timing": "",
+      "duration_days": "",
+      "instructions": ""
+    }
+  ],
+  "tests": [
+    {
+      "name": "",
+      "when_to_do": "",
+      "urgency": "",
+      "trigger_condition": "",
+      "fasting_required": ""
+    }
+  ],
+  "follow_up": {
+    "after_days": "",
+    "warning_signs": [],
+    "notes": ""
+  },
+  "patient_summary": ""
+}
+
+
+❌ No diagnosis
+❌ No guessing
+❌ No markdown
+
+CARE PLAN ENGINE (YOUR CORE IP)
+
+After doctor approval:
+
+Create scheduled events:
+
+Medicine reminders (daily schedule)
+
+Test reminders (date or condition-based)
+
+Follow-up reminders
+
+Store in care_events table.
+
+PATIENT EXECUTION ENGINE (WHATSAPP)
+Example WhatsApp Messages:
+
+Medicine
+
+“Please take Paracetamol – Morning & Night – After food. Day 1 of 3.”
+
+Conditional Test
+
+“If fever is still present today, please do CBC test.”
+
+Follow-up
+
+“Your follow-up with Dr. ___ is due tomorrow.”
+
+DOCTOR COMMAND CENTER
+
+Doctor can see:
+
+Patients who skipped medicines
+
+Pending tests
+
+Follow-up due list
+
+SAFETY & COMPLIANCE (MANDATORY)
+
+Consent checkbox before recording
+
+Doctor approval mandatory
+
+Audit log of edits
+
+Disclaimer on PDF:
+
+“Generated with AI assistance and approved by doctor”
+
+MVP LIMITS (DO NOT OVERBUILD)
+
+❌ No billing
+❌ No appointment booking
+❌ No insurance
+❌ No diagnosis engine
+
+DELIVERABLES EXPECTED FROM YOU
+
+FastAPI backend
+
+React frontend
+
+PostgreSQL schema
+
+AI extraction service
+
+WhatsApp mock integration
+
+Sample demo data
+
+README with setup steps
+
+BRANDING
+
+Product Name: CAREPATH AI
+Company: CODELYNE TECHNOLOGIES
+Theme: Medical Blue + White
+Tone: Trust, Clarity, Execution
+
+FINAL INSTRUCTION (VERY IMPORTANT)
+
+This is a doctor-first product.
+Automation must never override clinical judgment.
+
+Accuracy > Speed
+Trust > Features
+
+✅ START BUILDING CAREPATH AI STEP BY STEP
+❌ DO NOT SKIP ANY MODULE
+❓ ASK QUESTIONS ONLY IF BLOCKED
+🔥 END OF REPLIT MASTER SCRIPT

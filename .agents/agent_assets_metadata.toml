@@ -1,0 +1,62 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Z9mZYGGivMEUIMcAHCTum"
+uri = "file://carepath_database_dump.sql.gz"
+type = "unspecified"
+title = "CarePath AI - Complete Database Dump"
+
+[[outputs]]
+id = "FSXskLDiLQ5QZMCXzyYW_"
+uri = "file://docs/1_Project_Overview_Document.md"
+type = "text"
+title = "1. Project Overview Document (POD)"
+
+[[outputs]]
+id = "ZnZ7fFxsLH1kB1rJA8hTJ"
+uri = "file://docs/2_Business_Requirement_Document.md"
+type = "text"
+title = "2. Business Requirement Document (BRD)"
+
+[[outputs]]
+id = "f65_ECUVYKoi6Wg9dB8UH"
+uri = "file://docs/3_Software_Requirement_Specification.md"
+type = "text"
+title = "3. Software Requirement Specification (SRS)"
+
+[[outputs]]
+id = "9TzwozmYHEpsj8XkdOm1b"
+uri = "file://docs/4_UI_UX_Documentation.md"
+type = "text"
+title = "4. UI/UX Documentation"
+
+[[outputs]]
+id = "MWJwyrUo1QenrdUHdVpNu"
+uri = "file://docs/5_Technical_Documentation.md"
+type = "text"
+title = "5. Technical Documentation"
+
+[[outputs]]
+id = "aG4lQkN1D1K_yQajM2yUM"
+uri = "file://docs/6_Development_Documentation.md"
+type = "text"
+title = "6. Development Documentation"
+
+[[outputs]]
+id = "Nq0nt6uPqhypr0gUwBkAM"
+uri = "file://docs/7_Testing_Documentation.md"
+type = "text"
+title = "7. Testing Documentation"
+
+[[outputs]]
+id = "iaB6D_gryzIzsJTY6A6mF"
+uri = "file://CAREPATH_FEATURES.md"
+type = "text"
+title = "CarePath AI — Complete Feature Documentation"
+
+[[outputs]]
+id = "6CWoF-KCh0tsBxo3JL7YP"
+uri = "file://CAREPATH_AI_DOCUMENTATION.md"
+type = "text"
+title = "CarePath AI - Complete Project Documentation"
