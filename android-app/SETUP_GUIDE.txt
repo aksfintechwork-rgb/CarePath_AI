@@ -1,0 +1,117 @@
+====================================================
+  CAREPATH AI - Android App Setup Guide
+====================================================
+
+OPTION 1: Using Android Studio (Recommended)
+====================================================
+
+1. Open Android Studio
+2. Click "New Project" → "Empty Views Activity"
+3. Set these values:
+   - Name: CarePath AI
+   - Package name: com.carepath.ai
+   - Language: Java
+   - Minimum SDK: API 24 (Android 7.0)
+
+4. Replace these files from the android-app folder:
+
+   YOUR PROJECT                          THIS FOLDER
+   ─────────────────────────────────     ──────────────────
+   app/src/main/AndroidManifest.xml  ←   AndroidManifest.xml
+   app/src/main/java/com/carepath/
+     ai/MainActivity.java            ←   MainActivity.java
+   app/src/main/java/com/carepath/
+     ai/SplashActivity.java          ←   SplashActivity.java
+   app/src/main/res/layout/
+     activity_main.xml               ←   res/layout/activity_main.xml
+   app/src/main/res/layout/
+     activity_splash.xml             ←   res/layout/activity_splash.xml
+   app/src/main/res/drawable/
+     progress_bar.xml                ←   res/drawable/progress_bar.xml
+   app/src/main/res/drawable/
+     splash_background.xml           ←   res/drawable/splash_background.xml
+   app/src/main/res/drawable/
+     button_primary.xml              ←   res/drawable/button_primary.xml
+   app/src/main/res/drawable/
+     ic_no_connection.xml            ←   res/drawable/ic_no_connection.xml
+   app/src/main/res/values/
+     styles.xml                      ←   res/values/styles.xml
+   app/src/main/res/values/
+     strings.xml                     ←   res/values/strings.xml
+   app/src/main/res/values/
+     colors.xml                      ←   res/values/colors.xml
+   app/build.gradle                  ←   app-build.gradle (rename to build.gradle)
+   build.gradle                      ←   build.gradle
+
+5. Sync Gradle, then Build → Build APK
+
+6. APK will be at: app/build/outputs/apk/debug/app-debug.apk
+
+
+OPTION 2: Using Online APK Builder (No Android Studio)
+====================================================
+
+Use websites like:
+  - https://www.appsgeyser.com
+  - https://gonative.io
+  - https://appmaker.xyz
+
+Steps:
+1. Choose "WebView App" or "Website to App"
+2. Enter URL: https://care-path.replit.app
+3. App Name: CarePath AI
+4. Package: com.carepath.ai
+5. IMPORTANT: Enable these permissions:
+   - Microphone / Audio Recording
+   - Camera
+   - File Upload/Download
+   - Internet Access
+6. Download the generated APK
+
+
+WHAT THE APP DOES
+====================================================
+
+✓ Opens CarePath AI web app in full-screen WebView
+✓ Asks for Microphone permission on first launch
+✓ Asks for Camera permission (for Aadhaar scanning)
+✓ Splash screen with CarePath AI branding (2 seconds)
+✓ Progress bar while pages load
+✓ Pull-to-refresh support
+✓ "No Internet" error screen with retry button
+✓ Back button navigates within the app
+✓ File download support (prescriptions/PDFs)
+✓ File upload support (Aadhaar card photos)
+✓ Opens WhatsApp/Email/Phone links in native apps
+✓ Cookies persist between sessions (stays logged in)
+✓ If microphone denied permanently, shows dialog
+    to open Android Settings
+
+
+PERMISSIONS REQUESTED
+====================================================
+
+RECORD_AUDIO    - Required for consultation recording
+CAMERA          - For Aadhaar card scanning
+INTERNET        - To load the web app
+STORAGE         - To download prescriptions/reports
+VIBRATE         - For notifications
+WAKE_LOCK       - Keep screen on during recording
+
+
+TROUBLESHOOTING
+====================================================
+
+Q: Microphone still not working?
+A: Go to Android Settings → Apps → CarePath AI →
+   Permissions → Microphone → Allow
+
+Q: App shows blank white screen?
+A: Check internet connection, pull down to refresh
+
+Q: Login session lost after closing app?
+A: Make sure you're not using "Clear Data" in settings.
+   The app keeps cookies to stay logged in.
+
+Q: Can't download PDF?
+A: Allow Storage permission in Android Settings

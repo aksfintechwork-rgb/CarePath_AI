@@ -1,0 +1,42 @@
+# Node modules will be installed inside the container
+node_modules
+npm-debug.log*
+
+# Build output (rebuilt inside container)
+dist
+build
+.cache
+
+# Local env / secrets — NEVER bake into images
+.env
+.env.*
+!.env.example
+
+# Git / IDE
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+
+# Logs & OS files
+*.log
+.DS_Store
+Thumbs.db
+
+# Replit-specific
+.replit
+.local
+.upm
+.config
+attached_assets
+replit.nix
+
+# Tests / docs not needed in image
+coverage
+*.md
+!README.md
+
+# Docker meta
+Dockerfile
+.dockerignore

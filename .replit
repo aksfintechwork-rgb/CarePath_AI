@@ -1,0 +1,63 @@
+modules = ["nodejs-20", "web", "postgresql-16"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["chromium", "nss", "freetype", "harfbuzz", "cairo", "pango", "glib"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3001
+
+[env]
+PORT = "5000"
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["bash", "start.sh"]
+publicDir = "dist/public"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash start.sh"
+waitForPort = 5000
+
+[agent]
+stack = "MOCKUP_JS"
+mockupState = "FULLSTACK"
+integrations = ["javascript_openai_ai_integrations:2.0.0"]
+
+[userenv]
+
+[userenv.production]
+NODE_ENV = "production"
+
+[userenv.shared]
+WHATSAPP_ACCESS_TOKEN = "EAANcWf9EqZAABQ12VQHqLfXnR5MzZB9SnbUDMt5mqnKtpctIzra2NhICHVjXhAYoGoIWSZCh5RPr2TkQAQaOtZBYZCKPc34DDJXtNOknUYRZBPXOZCPZBeSovb2szBnenHcoPyoOZAF4ngrcKrQ57c7u07r9bfYPDZBfopdBNpodnZA9VCtDTmFv9VMgw9TAsM1Ruq37gZDZD"
+WHATSAPP_PHONE_NUMBER_ID = "1044640642060617"
+PUBLIC_BASE_URL = "https://carepathai.in"
