@@ -527,19 +527,24 @@ export async function sendPrescriptionPdf(
     log(`Prescription PDF sent to ${patientName} (${toNumber}), messageId: ${messageId}`, "whatsapp");
     await createWhatsappAuditLog("WHATSAPP_PRESCRIPTION_SENT", visitId, `Prescription PDF sent to ${patientName} (${toNumber})`);
 
-    await storage.createWhatsappMessageLog({
-      visitId,
-      patientId: null,
-      medicineId: null,
-      careEventId: null,
-      whatsappNumber: toNumber,
-      messageId,
-      status: "sent",
-      messagePayload: { type: "prescription_pdf", patientName, doctorName, filename },
-      retryCount: 0,
-    });
+    const visitRow = await storage.getVisit(visitId);
+    const careEvents = visitRow ? await storage.getCareEventsByVisit(visitId) : [];
+    const careEventId = careEvents[0]?.id;
+    if (visitRow && careEventId) {
+      await storage.createWhatsappMessageLog({
+        visitId,
+        patientId: visitRow.patientId,
+        medicineId: null,
+        careEventId,
+        whatsappNumber: toNumber,
+        whatsappMessageId: messageId ?? undefined,
+        status: "sent",
+        messagePayload: { type: "prescription_pdf", patientName, doctorName, filename },
+        retryCount: 0,
+      });
+    }
 
-    return { success: true, messageId };
+    return { success: true, messageId: messageId ?? undefined };
   } catch (err: any) {
     log(`Prescription PDF send error for ${patientName}: ${err.message}`, "whatsapp");
     await createWhatsappAuditLog("WHATSAPP_PRESCRIPTION_FAILED", visitId, `Error sending prescription PDF to ${patientName}: ${err.message}`);

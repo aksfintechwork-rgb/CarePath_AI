@@ -12,7 +12,7 @@ import {
   Zap, BarChart3, TrendingUp, DollarSign, MoreVertical, PauseCircle, XCircle, PlayCircle
 } from "lucide-react";
 
-function ActionDropdown({ subscription, doctorName, onAction }: { subscription: any; doctorName: string; onAction: (id: number, status: string) => void }) {
+function ActionDropdown({ subscription, doctorName, onAction }: { subscription: any; doctorName: string; onAction: (id: string, status: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

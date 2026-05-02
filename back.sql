@@ -1,0 +1,4 @@
+-- Care-Path-2: replace this file with a real backup.
+-- From project root, with DATABASE_URL in .env:
+--   npm run db:dump
+-- Commits: only if you accept the security risk of storing production data in Git.

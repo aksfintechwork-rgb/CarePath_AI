@@ -13,6 +13,7 @@ import crypto from "crypto";
 import { parseTimingToHours, parseDurationDays, processWhatsappWebhook, getWhatsappVerifyToken, startWhatsappScheduler, isWhatsappConfigured, isSchedulerRunning, sendPrescriptionPdf } from "./whatsapp";
 import { generatePrescriptionPdf, generateInvoicePdf } from "./pdf-generator";
 import { translateMedicalTerm, translateFreeTextBatch } from "./medical-translations";
+import { pathParam } from "./path-param";
 
 async function buildPatientHistoryContext(patientId: string) {
   const patient = await storage.getPatient(patientId);
@@ -30,7 +31,7 @@ async function buildPatientHistoryContext(patientId: string) {
     bloodGroup: h?.bloodGroup || undefined,
     weight: h?.weight ? String(h.weight) : undefined,
     height: h?.height ? String(h.height) : undefined,
-    age: patient?.age ? String(patient.age) : undefined,
+    age: patient?.age ?? undefined,
     gender: patient?.gender || undefined,
   };
 }
@@ -646,7 +647,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/upgrade-requests/:id/approve", authMiddleware, requireRole("admin"), requireAdminPermission("admin.doctor_subscriptions"), async (req: any, res) => {
     try {
-      const request = await db.select().from(upgradeRequests).where(eq(upgradeRequests.id, req.params.id)).limit(1);
+      const request = await db.select().from(upgradeRequests).where(eq(upgradeRequests.id, pathParam(req.params.id))).limit(1);
       if (request.length === 0) return res.status(404).json({ message: "Request not found" });
       const ur = request[0];
       if (ur.status !== "pending") return res.status(400).json({ message: "Request is not pending" });
@@ -685,7 +686,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/upgrade-requests/:id/reject", authMiddleware, requireRole("admin"), requireAdminPermission("admin.doctor_subscriptions"), async (req: any, res) => {
     try {
-      const request = await db.select().from(upgradeRequests).where(eq(upgradeRequests.id, req.params.id)).limit(1);
+      const request = await db.select().from(upgradeRequests).where(eq(upgradeRequests.id, pathParam(req.params.id))).limit(1);
       if (request.length === 0) return res.status(404).json({ message: "Request not found" });
       if (request[0].status !== "pending") return res.status(400).json({ message: "Request is not pending" });
       await db.update(upgradeRequests).set({ status: "rejected" }).where(eq(upgradeRequests.id, request[0].id));
@@ -949,7 +950,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/doctors/:id", authMiddleware, requireRole("admin"), requireAdminPermission("admin.doctors.view"), async (req, res) => {
     try {
-      const doctor = await storage.getUser(req.params.id);
+      const doctor = await storage.getUser(pathParam(req.params.id));
       if (!doctor || doctor.role !== "doctor") return res.status(404).json({ message: "Doctor not found" });
       const stats = await storage.getDoctorStats(doctor.id);
       const doctorVisits = await storage.getVisitsByDoctor(doctor.id);
@@ -966,10 +967,10 @@ export async function registerRoutes(
 
   app.post("/api/admin/doctors/:id/approve", authMiddleware, requireRole("admin"), requireAdminPermission("admin.doctors"), async (req, res) => {
     try {
-      const doctor = await storage.getUser(req.params.id);
+      const doctor = await storage.getUser(pathParam(req.params.id));
       if (!doctor || doctor.role !== "doctor") return res.status(404).json({ message: "Doctor not found" });
       if (doctor.status !== "pending") return res.status(400).json({ message: "Doctor is not in pending status" });
-      const updated = await storage.updateUser(req.params.id, { status: "approved" });
+      const updated = await storage.updateUser(pathParam(req.params.id), { status: "approved" });
       const { passwordHash: _, ...safeDoc } = updated!;
       await storage.createAuditLog((req as any).user.id, "APPROVE_DOCTOR", "doctor", doctor.id, `Approved doctor: ${doctor.name} (${doctor.email})`);
 
@@ -1007,9 +1008,9 @@ export async function registerRoutes(
 
   app.post("/api/admin/doctors/:id/reject", authMiddleware, requireRole("admin"), requireAdminPermission("admin.doctors"), async (req, res) => {
     try {
-      const doctor = await storage.getUser(req.params.id);
+      const doctor = await storage.getUser(pathParam(req.params.id));
       if (!doctor || doctor.role !== "doctor") return res.status(404).json({ message: "Doctor not found" });
-      const updated = await storage.updateUser(req.params.id, { status: "rejected" });
+      const updated = await storage.updateUser(pathParam(req.params.id), { status: "rejected" });
       const { passwordHash: _, ...safeDoc } = updated!;
       await storage.createAuditLog((req as any).user.id, "REJECT_DOCTOR", "doctor", doctor.id, `Rejected doctor: ${doctor.name} (${doctor.email})`);
       res.json(safeDoc);
@@ -1020,9 +1021,9 @@ export async function registerRoutes(
 
   app.get("/api/admin/doctors/:id/patients", authMiddleware, requireRole("admin"), requireAdminPermission("admin.doctors.view"), async (req, res) => {
     try {
-      const doctor = await storage.getUser(req.params.id);
+      const doctor = await storage.getUser(pathParam(req.params.id));
       if (!doctor || doctor.role !== "doctor") return res.status(404).json({ message: "Doctor not found" });
-      const doctorPatients = await storage.getPatientsByDoctor(req.params.id);
+      const doctorPatients = await storage.getPatientsByDoctor(pathParam(req.params.id));
       const patientsWithVisitCounts = await Promise.all(doctorPatients.map(async (p) => {
         const patientVisits = await storage.getVisitsByPatient(p.id);
         const activeVisits = patientVisits.filter(v => v.status === "active").length;
@@ -1037,9 +1038,9 @@ export async function registerRoutes(
 
   app.get("/api/admin/patients/:id/visits", authMiddleware, requireRole("admin"), requireAdminPermission("admin.doctors.view"), async (req, res) => {
     try {
-      const patient = await storage.getPatient(req.params.id);
+      const patient = await storage.getPatient(pathParam(req.params.id));
       if (!patient) return res.status(404).json({ message: "Patient not found" });
-      const patientVisits = await storage.getVisitsByPatient(req.params.id);
+      const patientVisits = await storage.getVisitsByPatient(pathParam(req.params.id));
       const enrichedVisits = await Promise.all(patientVisits.map(async (visit) => {
         const meds = await storage.getMedicinesByVisit(visit.id);
         const visitTests = await storage.getTestsByVisit(visit.id);
@@ -1147,7 +1148,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/subscription-plans/:id", authMiddleware, requireRole("admin"), requireAdminPermission("admin.subscription_plans"), async (req, res) => {
     try {
-      const plan = await storage.getSubscriptionPlan(req.params.id);
+      const plan = await storage.getSubscriptionPlan(pathParam(req.params.id));
       if (!plan) return res.status(404).json({ message: "Plan not found" });
       res.json(plan);
     } catch (err: any) {
@@ -1181,7 +1182,7 @@ export async function registerRoutes(
       for (const key of allowedFields) {
         if (key in req.body) sanitized[key] = req.body[key];
       }
-      const plan = await storage.updateSubscriptionPlan(req.params.id, sanitized);
+      const plan = await storage.updateSubscriptionPlan(pathParam(req.params.id), sanitized);
       if (!plan) return res.status(404).json({ message: "Plan not found" });
       await storage.createAuditLog((req as any).user.id, "update_plan", "subscription_plan", plan.id, `Updated plan: ${plan.name}`);
       res.json(plan);
@@ -1193,7 +1194,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/subscription-plans/:id/clone", authMiddleware, requireRole("admin"), requireAdminPermission("admin.subscription_plans"), async (req, res) => {
     try {
-      const existing = await storage.getSubscriptionPlan(req.params.id);
+      const existing = await storage.getSubscriptionPlan(pathParam(req.params.id));
       if (!existing) return res.status(404).json({ message: "Plan not found" });
       const { id, createdAt, updatedAt, ...planData } = existing;
       const cloned = await storage.createSubscriptionPlan({
@@ -1211,7 +1212,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/subscription-plans/:id/activate", authMiddleware, requireRole("admin"), requireAdminPermission("admin.subscription_plans"), async (req, res) => {
     try {
-      const plan = await storage.updateSubscriptionPlan(req.params.id, { status: "active" });
+      const plan = await storage.updateSubscriptionPlan(pathParam(req.params.id), { status: "active" });
       if (!plan) return res.status(404).json({ message: "Plan not found" });
       await storage.createAuditLog((req as any).user.id, "activate_plan", "subscription_plan", plan.id, `Activated plan: ${plan.name}`);
       res.json(plan);
@@ -1222,7 +1223,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/subscription-plans/:id/deactivate", authMiddleware, requireRole("admin"), requireAdminPermission("admin.subscription_plans"), async (req, res) => {
     try {
-      const plan = await storage.updateSubscriptionPlan(req.params.id, { status: "inactive" });
+      const plan = await storage.updateSubscriptionPlan(pathParam(req.params.id), { status: "inactive" });
       if (!plan) return res.status(404).json({ message: "Plan not found" });
       await storage.createAuditLog((req as any).user.id, "deactivate_plan", "subscription_plan", plan.id, `Deactivated plan: ${plan.name}`);
       res.json(plan);
@@ -1233,11 +1234,11 @@ export async function registerRoutes(
 
   app.delete("/api/admin/subscription-plans/:id", authMiddleware, requireRole("admin"), requireAdminPermission("admin.subscription_plans"), async (req, res) => {
     try {
-      const plan = await storage.getSubscriptionPlan(req.params.id);
+      const plan = await storage.getSubscriptionPlan(pathParam(req.params.id));
       if (!plan) return res.status(404).json({ message: "Plan not found" });
-      const deleted = await storage.deleteSubscriptionPlan(req.params.id);
+      const deleted = await storage.deleteSubscriptionPlan(pathParam(req.params.id));
       if (deleted) {
-        await storage.createAuditLog((req as any).user.id, "delete_plan", "subscription_plan", req.params.id, `Deleted plan: ${plan.name}`);
+        await storage.createAuditLog((req as any).user.id, "delete_plan", "subscription_plan", pathParam(req.params.id), `Deleted plan: ${plan.name}`);
       }
       res.json({ success: deleted });
     } catch (err: any) {
@@ -1248,7 +1249,7 @@ export async function registerRoutes(
   // Plan Features
   app.get("/api/admin/subscription-plans/:planId/features", authMiddleware, requireRole("admin"), requireAdminPermission("admin.subscription_plans"), async (req, res) => {
     try {
-      const features = await storage.getPlanFeatures(req.params.planId);
+      const features = await storage.getPlanFeatures(pathParam(req.params.planId));
       res.json(features);
     } catch (err: any) {
       res.status(500).json({ message: "Failed to fetch plan features" });
@@ -1261,7 +1262,7 @@ export async function registerRoutes(
       if (!body.featureKey || !body.featureName) {
         return res.status(400).json({ message: "featureKey and featureName are required" });
       }
-      const feature = await storage.createPlanFeature({ ...body, planId: req.params.planId });
+      const feature = await storage.createPlanFeature({ ...body, planId: pathParam(req.params.planId) });
       res.status(201).json(feature);
     } catch (err: any) {
       console.error("Create plan feature error:", err);
@@ -1276,7 +1277,7 @@ export async function registerRoutes(
       for (const key of allowedFields) {
         if (key in req.body) sanitized[key] = req.body[key];
       }
-      const feature = await storage.updatePlanFeature(req.params.id, sanitized);
+      const feature = await storage.updatePlanFeature(pathParam(req.params.id), sanitized);
       if (!feature) return res.status(404).json({ message: "Feature not found" });
       res.json(feature);
     } catch (err: any) {
@@ -1286,7 +1287,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/plan-features/:id", authMiddleware, requireRole("admin"), requireAdminPermission("admin.subscription_plans"), async (req, res) => {
     try {
-      const deleted = await storage.deletePlanFeature(req.params.id);
+      const deleted = await storage.deletePlanFeature(pathParam(req.params.id));
       res.json({ success: deleted });
     } catch (err: any) {
       res.status(500).json({ message: "Failed to delete plan feature" });
@@ -1325,7 +1326,7 @@ export async function registerRoutes(
       for (const key of allowedFields) {
         if (key in req.body) sanitized[key] = req.body[key];
       }
-      const pricing = await storage.updateRegionalPricing(req.params.id, sanitized);
+      const pricing = await storage.updateRegionalPricing(pathParam(req.params.id), sanitized);
       if (!pricing) return res.status(404).json({ message: "Region not found" });
       await storage.createAuditLog((req as any).user.id, "update_regional_pricing", "regional_pricing", pricing.id, `Updated region: ${pricing.regionName}`);
       res.json(pricing);
@@ -1336,11 +1337,11 @@ export async function registerRoutes(
 
   app.delete("/api/admin/regional-pricing/:id", authMiddleware, requireRole("admin"), requireAdminPermission("admin.subscription_plans"), async (req, res) => {
     try {
-      const pricing = await storage.getRegionalPricing(req.params.id);
+      const pricing = await storage.getRegionalPricing(pathParam(req.params.id));
       if (!pricing) return res.status(404).json({ message: "Region not found" });
-      const deleted = await storage.deleteRegionalPricing(req.params.id);
+      const deleted = await storage.deleteRegionalPricing(pathParam(req.params.id));
       if (deleted) {
-        await storage.createAuditLog((req as any).user.id, "delete_regional_pricing", "regional_pricing", req.params.id, `Deleted region: ${pricing.regionName}`);
+        await storage.createAuditLog((req as any).user.id, "delete_regional_pricing", "regional_pricing", pathParam(req.params.id), `Deleted region: ${pricing.regionName}`);
       }
       res.json({ success: deleted });
     } catch (err: any) {
@@ -1632,7 +1633,7 @@ export async function registerRoutes(
       if (sanitized.planId) {
         const plan = await storage.getSubscriptionPlan(sanitized.planId);
         if (!plan) return res.status(404).json({ message: "Plan not found" });
-        const existing = await storage.getDoctorSubscription(req.params.id);
+        const existing = await storage.getDoctorSubscription(pathParam(req.params.id));
         const multiplier = existing?.appliedMultiplier || 1.0;
         sanitized.finalMonthlyPrice = plan.monthlyPrice * multiplier;
         sanitized.finalAnnualPrice = plan.annualPrice * multiplier;
@@ -1645,13 +1646,13 @@ export async function registerRoutes(
         if (coupon.validFrom && new Date(coupon.validFrom) > now) return res.status(400).json({ message: "Coupon not yet valid" });
         if (coupon.validUntil && new Date(coupon.validUntil) < now) return res.status(400).json({ message: "Coupon expired" });
         if (coupon.maxUses && (coupon.currentUses || 0) >= coupon.maxUses) return res.status(400).json({ message: "Coupon usage limit reached" });
-        const targetPlanId = sanitized.planId || (await storage.getDoctorSubscription(req.params.id))?.planId;
+        const targetPlanId = sanitized.planId || (await storage.getDoctorSubscription(pathParam(req.params.id)))?.planId;
         if (targetPlanId && coupon.applicablePlanIds && coupon.applicablePlanIds.length > 0 && !coupon.applicablePlanIds.includes(targetPlanId)) {
           return res.status(400).json({ message: "Coupon is not applicable to this plan" });
         }
       }
 
-      const sub = await storage.updateDoctorSubscription(req.params.id, sanitized);
+      const sub = await storage.updateDoctorSubscription(pathParam(req.params.id), sanitized);
       if (!sub) return res.status(404).json({ message: "Subscription not found" });
 
       await storage.createAuditLog((req as any).user.id, "update_subscription", "doctor_subscription", sub.id, `Updated subscription status to ${sub.status}`);
@@ -1999,7 +2000,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/invoices/:id", authMiddleware, requireRole("admin"), requireAdminPermission("admin.billing"), async (req, res) => {
     try {
-      const invoice = await storage.getInvoice(req.params.id);
+      const invoice = await storage.getInvoice(pathParam(req.params.id));
       if (!invoice) return res.status(404).json({ message: "Invoice not found" });
 
       const lineItems = await storage.getInvoiceLineItems(invoice.id);
@@ -2021,9 +2022,9 @@ export async function registerRoutes(
 
   app.get("/api/admin/invoices/:id/pdf", authMiddleware, requireRole("admin"), requireAdminPermission("admin.billing"), async (req, res) => {
     try {
-      const pdfBuffer = await generateInvoicePdf(req.params.id);
-      const invoice = await storage.getInvoice(req.params.id);
-      const filename = `invoice-${invoice?.invoiceNumber || req.params.id}.pdf`;
+      const pdfBuffer = await generateInvoicePdf(pathParam(req.params.id));
+      const invoice = await storage.getInvoice(pathParam(req.params.id));
+      const filename = `invoice-${invoice?.invoiceNumber || pathParam(req.params.id)}.pdf`;
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(pdfBuffer);
@@ -2046,7 +2047,7 @@ export async function registerRoutes(
         if (refundReason) data.refundReason = refundReason;
       }
 
-      const updated = await storage.updateInvoice(req.params.id, data);
+      const updated = await storage.updateInvoice(pathParam(req.params.id), data);
       if (!updated) return res.status(404).json({ message: "Invoice not found" });
 
       await storage.createAuditLog((req as any).user.id, `invoice_${status}`, "invoice", updated.id, `Invoice ${updated.invoiceNumber} marked as ${status}${refundReason ? `: ${refundReason}` : ""}`);
@@ -2129,7 +2130,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Max uses must be non-negative" });
       }
 
-      const updated = await storage.updateCoupon(req.params.id, sanitized);
+      const updated = await storage.updateCoupon(pathParam(req.params.id), sanitized);
       if (!updated) return res.status(404).json({ message: "Coupon not found" });
 
       await storage.createAuditLog((req as any).user.id, "update_coupon", "coupon", updated.id, `Updated coupon ${updated.code}`);
@@ -2142,11 +2143,11 @@ export async function registerRoutes(
 
   app.delete("/api/admin/coupons/:id", authMiddleware, requireRole("admin"), requireAdminPermission("admin.coupons"), async (req, res) => {
     try {
-      const coupon = await storage.getCoupon(req.params.id);
+      const coupon = await storage.getCoupon(pathParam(req.params.id));
       if (!coupon) return res.status(404).json({ message: "Coupon not found" });
 
-      await storage.deleteCoupon(req.params.id);
-      await storage.createAuditLog((req as any).user.id, "delete_coupon", "coupon", req.params.id, `Deleted coupon ${coupon.code}`);
+      await storage.deleteCoupon(pathParam(req.params.id));
+      await storage.createAuditLog((req as any).user.id, "delete_coupon", "coupon", pathParam(req.params.id), `Deleted coupon ${coupon.code}`);
       res.status(204).send();
     } catch (err: any) {
       console.error("Delete coupon error:", err);
@@ -2435,7 +2436,7 @@ export async function registerRoutes(
 
       const activeCount = allVisits.filter(v => v.status === "active").length;
       const draftCount = allVisits.filter(v => v.status === "draft").length;
-      const queue = await storage.getPatientQueue(req.user.id);
+      const queue = await storage.getPatientQueue(user.id);
       const waitingCount = queue.filter(q => q.status === "waiting").length;
 
       res.json({
@@ -2646,7 +2647,7 @@ export async function registerRoutes(
 
   app.get("/api/patients/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const patient = await storage.getPatient(req.params.id);
+      const patient = await storage.getPatient(pathParam(req.params.id));
       if (!patient) return res.status(404).json({ message: "Patient not found" });
       res.json(patient);
     } catch (err) {
@@ -2670,7 +2671,7 @@ export async function registerRoutes(
   app.patch("/api/patients/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
       const user = req.user!;
-      const patient = await storage.getPatient(req.params.id);
+      const patient = await storage.getPatient(pathParam(req.params.id));
       if (!patient) return res.status(404).json({ message: "Patient not found" });
       if (user.role === "doctor" && patient.doctorId !== user.id) {
         return res.status(403).json({ message: "Not authorized to update this patient" });
@@ -2683,7 +2684,7 @@ export async function registerRoutes(
       if (whatsappNumber !== undefined) updateData.whatsappNumber = whatsappNumber?.trim() || null;
       if (knownConditions !== undefined) updateData.knownConditions = knownConditions?.trim() || null;
       if (allergies !== undefined) updateData.allergies = allergies?.trim() || null;
-      const updated = await storage.updatePatient(req.params.id, updateData);
+      const updated = await storage.updatePatient(pathParam(req.params.id), updateData);
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to update patient" });
@@ -2704,7 +2705,7 @@ export async function registerRoutes(
 
   app.get("/api/visits/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
 
       const patient = await storage.getPatient(visit.patientId);
@@ -2730,7 +2731,7 @@ export async function registerRoutes(
 
   app.get("/api/visits/:id/audio", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
       if (!visit.audioBase64) return res.status(404).json({ message: "No audio available" });
       
@@ -2799,11 +2800,11 @@ export async function registerRoutes(
 
   app.patch("/api/visits/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
 
-      const updated = await storage.updateVisit(req.params.id, req.body);
-      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${req.params.id}`);
+      const updated = await storage.updateVisit(pathParam(req.params.id), req.body);
+      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${pathParam(req.params.id)}`);
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to update visit" });
@@ -2813,16 +2814,16 @@ export async function registerRoutes(
   app.post("/api/visits/:id/approve", authMiddleware, requireApproved, async (req, res) => {
     try {
       const user = req.user!;
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
 
-      const updated = await storage.updateVisit(req.params.id, {
+      const updated = await storage.updateVisit(pathParam(req.params.id), {
         status: "active",
         approved: true,
         approvedAt: new Date(),
       });
 
-      const approvedMeds = await storage.getMedicinesByVisit(req.params.id);
+      const approvedMeds = await storage.getMedicinesByVisit(pathParam(req.params.id));
       for (const med of approvedMeds) {
         const timingHours = parseTimingToHours(med.timing);
         const totalDays = parseDurationDays(med.instructions, med.durationDays);
@@ -2832,7 +2833,7 @@ export async function registerRoutes(
             scheduledDate.setDate(scheduledDate.getDate() + day);
             scheduledDate.setHours(hour, 0, 0, 0);
             await storage.createCareEvent({
-              visitId: req.params.id,
+              visitId: pathParam(req.params.id),
               medicineId: med.id,
               eventType: "medicine",
               scheduledTime: scheduledDate,
@@ -2843,10 +2844,10 @@ export async function registerRoutes(
         }
       }
 
-      const visitTests = await storage.getTestsByVisit(req.params.id);
+      const visitTests = await storage.getTestsByVisit(pathParam(req.params.id));
       for (const test of visitTests) {
         await storage.createCareEvent({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           eventType: "test",
           scheduledTime: new Date(),
           status: "pending",
@@ -2854,12 +2855,12 @@ export async function registerRoutes(
         });
       }
 
-      const fups = await storage.getFollowupsByVisit(req.params.id);
+      const fups = await storage.getFollowupsByVisit(pathParam(req.params.id));
       for (const fup of fups) {
         const followupDate = new Date();
         followupDate.setDate(followupDate.getDate() + (fup.followupAfterDays || 7));
         await storage.createCareEvent({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           eventType: "followup",
           scheduledTime: followupDate,
           status: "pending",
@@ -2881,14 +2882,14 @@ export async function registerRoutes(
             }
 
             const baseUrl = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
-            const pdfUrl = `${baseUrl}/api/visits/${req.params.id}/prescription.pdf?token=${shareToken.token}`;
+            const pdfUrl = `${baseUrl}/api/visits/${pathParam(req.params.id)}/prescription.pdf?token=${shareToken.token}`;
 
             await sendPrescriptionPdf(
               patient.phone,
               patient.name,
               doctor?.name || "Doctor",
               pdfUrl,
-              req.params.id
+              pathParam(req.params.id)
             );
           }
         } catch (err: any) {
@@ -2896,7 +2897,7 @@ export async function registerRoutes(
         }
       })();
 
-      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${req.params.id}`);
+      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${pathParam(req.params.id)}`);
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to approve visit" });
@@ -2905,12 +2906,12 @@ export async function registerRoutes(
 
   app.post("/api/visits/:id/cancel", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
       if (visit.status !== "recording") {
         return res.status(400).json({ message: "Only recording visits can be cancelled" });
       }
-      const updated = await storage.updateVisit(req.params.id, { status: "cancelled" });
+      const updated = await storage.updateVisit(pathParam(req.params.id), { status: "cancelled" });
       broadcastInvalidate("/api/visits", "/api/dashboard");
       res.json(updated);
     } catch (err) {
@@ -2921,12 +2922,12 @@ export async function registerRoutes(
   // ── Medicines ──
   app.post("/api/visits/:visitId/medicines", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const data = { ...req.body, visitId: req.params.visitId };
+      const data = { ...req.body, visitId: pathParam(req.params.visitId) };
       if (!data.durationDays && data.instructions) {
         data.durationDays = parseDurationDays(data.instructions, null);
       }
       const med = await storage.createMedicine(data);
-      broadcastInvalidate(`/api/visits/${req.params.visitId}`);
+      broadcastInvalidate(`/api/visits/${pathParam(req.params.visitId)}`);
       res.status(201).json(med);
     } catch (err) {
       res.status(500).json({ message: "Failed to add medicine" });
@@ -2935,7 +2936,7 @@ export async function registerRoutes(
 
   app.patch("/api/medicines/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const updated = await storage.updateMedicine(req.params.id, req.body);
+      const updated = await storage.updateMedicine(pathParam(req.params.id), req.body);
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to update medicine" });
@@ -2944,7 +2945,7 @@ export async function registerRoutes(
 
   app.delete("/api/medicines/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const deleted = await storage.deleteMedicine(req.params.id);
+      const deleted = await storage.deleteMedicine(pathParam(req.params.id));
       if (!deleted) return res.status(404).json({ message: "Medicine not found" });
       broadcastInvalidate("/api/visits");
       res.status(204).send();
@@ -2956,7 +2957,7 @@ export async function registerRoutes(
   // ── Tests ──
   app.post("/api/visits/:visitId/tests", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const data = { ...req.body, visitId: req.params.visitId };
+      const data = { ...req.body, visitId: pathParam(req.params.visitId) };
       const test = await storage.createTest(data);
       res.status(201).json(test);
     } catch (err) {
@@ -2966,7 +2967,7 @@ export async function registerRoutes(
 
   app.patch("/api/tests/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const updated = await storage.updateTest(req.params.id, req.body);
+      const updated = await storage.updateTest(pathParam(req.params.id), req.body);
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to update test" });
@@ -2975,7 +2976,7 @@ export async function registerRoutes(
 
   app.delete("/api/tests/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const deleted = await storage.deleteTest(req.params.id);
+      const deleted = await storage.deleteTest(pathParam(req.params.id));
       if (!deleted) return res.status(404).json({ message: "Test not found" });
       broadcastInvalidate("/api/visits");
       res.status(204).send();
@@ -2987,7 +2988,7 @@ export async function registerRoutes(
   // ── Followups ──
   app.post("/api/visits/:visitId/followups", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const data = { ...req.body, visitId: req.params.visitId };
+      const data = { ...req.body, visitId: pathParam(req.params.visitId) };
       const fup = await storage.createFollowup(data);
       res.status(201).json(fup);
     } catch (err) {
@@ -2997,7 +2998,7 @@ export async function registerRoutes(
 
   app.patch("/api/followups/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const updated = await storage.updateFollowup(req.params.id, req.body);
+      const updated = await storage.updateFollowup(pathParam(req.params.id), req.body);
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to update followup" });
@@ -3018,7 +3019,7 @@ export async function registerRoutes(
         }
       }
 
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
 
       const { audio, fileName } = req.body;
@@ -3040,8 +3041,8 @@ export async function registerRoutes(
 
       const estimatedMinutes = Math.max(0.1, (audio.length * 0.75) / (16000 * 2 * 60));
       storage.createAiUsageLog({
-        doctorId: visit.doctorId,
-        visitId: req.params.id,
+        doctorId: visit.doctorId ?? req.user!.id,
+        visitId: pathParam(req.params.id),
         minutesUsed: Math.round(estimatedMinutes * 100) / 100,
         usageType: "upload_transcription",
       }).catch(err => console.error("AI usage log error:", err));
@@ -3061,18 +3062,18 @@ export async function registerRoutes(
         status: "draft",
         audioBase64: audio,
       };
-      await storage.updateVisit(req.params.id, updateData);
+      await storage.updateVisit(pathParam(req.params.id), updateData);
 
-      const existingMeds = await storage.getMedicinesByVisit(req.params.id);
+      const existingMeds = await storage.getMedicinesByVisit(pathParam(req.params.id));
       for (const m of existingMeds) await storage.deleteMedicine(m.id);
-      const existingTests = await storage.getTestsByVisit(req.params.id);
+      const existingTests = await storage.getTestsByVisit(pathParam(req.params.id));
       for (const t of existingTests) await storage.deleteTest(t.id);
-      const existingFollowups = await storage.getFollowupsByVisit(req.params.id);
+      const existingFollowups = await storage.getFollowupsByVisit(pathParam(req.params.id));
       for (const f of existingFollowups) await storage.deleteFollowup(f.id);
 
       for (const med of aiDraft.medicines) {
         await storage.createMedicine({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           name: med.medicine_name,
           dose: med.dosage,
           frequency: med.frequency,
@@ -3089,7 +3090,7 @@ export async function registerRoutes(
         const urgency = isObj ? (testItem as any).urgency || null : null;
         const triggerCondition = isObj ? (testItem as any).trigger_condition || null : null;
         await storage.createTest({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           name: testName,
           whenToDo,
           urgency,
@@ -3113,7 +3114,7 @@ export async function registerRoutes(
           afterDays = unit.startsWith("week") ? num * 7 : unit.startsWith("month") ? num * 30 : num;
         }
         await storage.createFollowup({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           followupAfterDays: afterDays,
           followupDate: null,
           warningSigns: [],
@@ -3121,11 +3122,11 @@ export async function registerRoutes(
         });
       }
 
-      const updatedVisit = await storage.getVisit(req.params.id);
-      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${req.params.id}`);
+      const updatedVisit = await storage.getVisit(pathParam(req.params.id));
+      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${pathParam(req.params.id)}`);
       res.json(updatedVisit);
 
-      autoGenerateAlternativesForVisit(req.params.id).catch(() => {});
+      autoGenerateAlternativesForVisit(pathParam(req.params.id)).catch(() => {});
     } catch (err) {
       console.error("Upload audio error:", err);
       res.status(500).json({ message: "Failed to process uploaded audio" });
@@ -3147,10 +3148,10 @@ export async function registerRoutes(
         }
       }
 
-      console.log(`[CHUNK-SERVER] Received chunk for visit ${req.params.id}`);
-      const visit = await storage.getVisit(req.params.id);
+      console.log(`[CHUNK-SERVER] Received chunk for visit ${pathParam(req.params.id)}`);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) {
-        console.log(`[CHUNK-SERVER] Visit not found: ${req.params.id}`);
+        console.log(`[CHUNK-SERVER] Visit not found: ${pathParam(req.params.id)}`);
         return res.status(404).json({ message: "Visit not found" });
       }
 
@@ -3162,7 +3163,7 @@ export async function registerRoutes(
 
       console.log(`[CHUNK-SERVER] Chunk #${chunkIndex}: audio base64 length=${audio.length}`);
 
-      const lastSize = chunkAudioSizeCache.get(req.params.id) || 0;
+      const lastSize = chunkAudioSizeCache.get(pathParam(req.params.id)) || 0;
       const currentSize = audio.length;
       const growthRatio = lastSize > 0 ? currentSize / lastSize : 2;
       if (growthRatio < 1.15 && lastSize > 0) {
@@ -3170,7 +3171,7 @@ export async function registerRoutes(
         return res.json({ chunkIndex, chunkTranscript: "", fullTranscript: visit.transcriptText || "" });
       }
 
-      chunkAudioSizeCache.set(req.params.id, currentSize);
+      chunkAudioSizeCache.set(pathParam(req.params.id), currentSize);
 
       const visitLanguage = visit.language || "English";
       console.log(`[CHUNK-SERVER] Chunk #${chunkIndex}: Transcribing with Whisper (lang=${visitLanguage})...`);
@@ -3184,7 +3185,7 @@ export async function registerRoutes(
       }
 
       if (fullTranscript && fullTranscript.trim().length > 0) {
-        await storage.updateVisit(req.params.id, { transcriptText: fullTranscript });
+        await storage.updateVisit(pathParam(req.params.id), { transcriptText: fullTranscript });
         console.log(`[CHUNK-SERVER] Chunk #${chunkIndex}: Transcript saved to DB`);
       }
 
@@ -3209,15 +3210,15 @@ export async function registerRoutes(
         }
       }
 
-      console.log(`[FINALIZE-SERVER] Received finalize for visit ${req.params.id}`);
-      const visit = await storage.getVisit(req.params.id);
+      console.log(`[FINALIZE-SERVER] Received finalize for visit ${pathParam(req.params.id)}`);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) {
-        console.log(`[FINALIZE-SERVER] Visit not found: ${req.params.id}`);
+        console.log(`[FINALIZE-SERVER] Visit not found: ${pathParam(req.params.id)}`);
         return res.status(404).json({ message: "Visit not found" });
       }
 
-      const lastChunkAudioSize = chunkAudioSizeCache.get(req.params.id) || 0;
-      chunkAudioSizeCache.delete(req.params.id);
+      const lastChunkAudioSize = chunkAudioSizeCache.get(pathParam(req.params.id)) || 0;
+      chunkAudioSizeCache.delete(pathParam(req.params.id));
 
       const visitLanguage = visit.language || "English";
       const { fullAudio, hadChunks } = req.body;
@@ -3263,8 +3264,8 @@ export async function registerRoutes(
       if (audioSizeForUsage > 0) {
         const estMinutes = Math.max(0.1, (audioSizeForUsage * 0.75) / (16000 * 2 * 60));
         storage.createAiUsageLog({
-          doctorId: visit.doctorId,
-          visitId: req.params.id,
+          doctorId: visit.doctorId ?? req.user!.id,
+          visitId: pathParam(req.params.id),
           minutesUsed: Math.round(estMinutes * 100) / 100,
           usageType: "finalize_transcription",
         }).catch(err => console.error("AI usage log error:", err));
@@ -3297,18 +3298,18 @@ export async function registerRoutes(
       if (fullAudio && typeof fullAudio === "string" && fullAudio.length > 100) {
         updateData.audioBase64 = fullAudio;
       }
-      await storage.updateVisit(req.params.id, updateData);
+      await storage.updateVisit(pathParam(req.params.id), updateData);
 
-      const existingMeds = await storage.getMedicinesByVisit(req.params.id);
+      const existingMeds = await storage.getMedicinesByVisit(pathParam(req.params.id));
       for (const m of existingMeds) await storage.deleteMedicine(m.id);
-      const existingTests = await storage.getTestsByVisit(req.params.id);
+      const existingTests = await storage.getTestsByVisit(pathParam(req.params.id));
       for (const t of existingTests) await storage.deleteTest(t.id);
-      const existingFollowups = await storage.getFollowupsByVisit(req.params.id);
+      const existingFollowups = await storage.getFollowupsByVisit(pathParam(req.params.id));
       for (const f of existingFollowups) await storage.deleteFollowup(f.id);
 
       for (const med of aiDraft.medicines) {
         await storage.createMedicine({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           name: med.medicine_name,
           dose: med.dosage,
           frequency: med.frequency,
@@ -3325,7 +3326,7 @@ export async function registerRoutes(
         const urgency = isObj ? (testItem as any).urgency || null : null;
         const triggerCondition = isObj ? (testItem as any).trigger_condition || null : null;
         await storage.createTest({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           name: testName,
           whenToDo,
           urgency,
@@ -3349,7 +3350,7 @@ export async function registerRoutes(
           afterDays = unit.startsWith("week") ? num * 7 : unit.startsWith("month") ? num * 30 : num;
         }
         await storage.createFollowup({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           followupAfterDays: afterDays,
           followupDate: null,
           warningSigns: [],
@@ -3357,12 +3358,12 @@ export async function registerRoutes(
         });
       }
 
-      const updatedVisit = await storage.getVisit(req.params.id);
-      console.log(`[FINALIZE-SERVER] Complete — visit ${req.params.id} updated to status=${updatedVisit?.status}, medicines=${aiDraft.medicines?.length}, tests=${aiDraft.tests?.length}`);
-      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${req.params.id}`);
+      const updatedVisit = await storage.getVisit(pathParam(req.params.id));
+      console.log(`[FINALIZE-SERVER] Complete — visit ${pathParam(req.params.id)} updated to status=${updatedVisit?.status}, medicines=${aiDraft.medicines?.length}, tests=${aiDraft.tests?.length}`);
+      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${pathParam(req.params.id)}`);
       res.json(updatedVisit);
 
-      autoGenerateAlternativesForVisit(req.params.id).catch(() => {});
+      autoGenerateAlternativesForVisit(pathParam(req.params.id)).catch(() => {});
     } catch (err) {
       console.error("[FINALIZE-SERVER] Fatal error:", err);
       res.status(500).json({ message: "Failed to finalize visit" });
@@ -3372,7 +3373,7 @@ export async function registerRoutes(
   // ── Re-extract AI data (re-run GPT-4o on existing transcript with updated language prompt) ──
   app.post("/api/visits/:id/reextract", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
       if (!visit.transcriptText || visit.transcriptText.length < 10) {
         return res.status(400).json({ message: "No transcript available to re-extract from" });
@@ -3380,35 +3381,35 @@ export async function registerRoutes(
 
       const requestedLanguage = req.body?.language;
       const visitLanguage = requestedLanguage || visit.language || "English";
-      console.log(`[REEXTRACT] Re-extracting visit ${req.params.id} with language=${visitLanguage}, transcript=${visit.transcriptText.length} chars`);
+      console.log(`[REEXTRACT] Re-extracting visit ${pathParam(req.params.id)} with language=${visitLanguage}, transcript=${visit.transcriptText.length} chars`);
 
       if (requestedLanguage && requestedLanguage !== visit.language) {
-        await storage.updateVisit(req.params.id, { language: requestedLanguage });
+        await storage.updateVisit(pathParam(req.params.id), { language: requestedLanguage });
       }
 
       const reextractHistory = await buildPatientHistoryContext(visit.patientId);
       const aiDraft = await extractMedicalData(visit.transcriptText, visitLanguage, reextractHistory);
       console.log(`[REEXTRACT] Complete — medicines: ${aiDraft.medicines?.length || 0}, tests: ${aiDraft.tests?.length || 0}`);
 
-      await storage.updateVisit(req.params.id, {
+      await storage.updateVisit(pathParam(req.params.id), {
         aiDraftJson: aiDraft,
         status: "draft",
       });
 
-      const existingCareEvents = await storage.getCareEventsByVisit(req.params.id);
+      const existingCareEvents = await storage.getCareEventsByVisit(pathParam(req.params.id));
       for (const ce of existingCareEvents) {
         await db.delete(careEvents).where(eq(careEvents.id, ce.id));
       }
-      const existingMeds = await storage.getMedicinesByVisit(req.params.id);
+      const existingMeds = await storage.getMedicinesByVisit(pathParam(req.params.id));
       for (const m of existingMeds) await storage.deleteMedicine(m.id);
-      const existingTests = await storage.getTestsByVisit(req.params.id);
+      const existingTests = await storage.getTestsByVisit(pathParam(req.params.id));
       for (const t of existingTests) await storage.deleteTest(t.id);
-      const existingFollowups = await storage.getFollowupsByVisit(req.params.id);
+      const existingFollowups = await storage.getFollowupsByVisit(pathParam(req.params.id));
       for (const f of existingFollowups) await storage.deleteFollowup(f.id);
 
       for (const med of aiDraft.medicines) {
         await storage.createMedicine({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           name: med.medicine_name,
           dose: med.dosage,
           frequency: med.frequency,
@@ -3425,7 +3426,7 @@ export async function registerRoutes(
         const urgency = isObj ? (testItem as any).urgency || null : null;
         const triggerCondition = isObj ? (testItem as any).trigger_condition || null : null;
         await storage.createTest({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           name: testName,
           whenToDo,
           urgency,
@@ -3449,7 +3450,7 @@ export async function registerRoutes(
           afterDays = unit.startsWith("week") ? num * 7 : unit.startsWith("month") ? num * 30 : num;
         }
         await storage.createFollowup({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           followupAfterDays: afterDays,
           followupDate: null,
           warningSigns: [],
@@ -3457,11 +3458,11 @@ export async function registerRoutes(
         });
       }
 
-      const updatedVisit = await storage.getVisit(req.params.id);
-      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${req.params.id}`);
+      const updatedVisit = await storage.getVisit(pathParam(req.params.id));
+      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${pathParam(req.params.id)}`);
       res.json(updatedVisit);
 
-      autoGenerateAlternativesForVisit(req.params.id).catch(() => {});
+      autoGenerateAlternativesForVisit(pathParam(req.params.id)).catch(() => {});
     } catch (err) {
       console.error("[REEXTRACT] Error:", err);
       res.status(500).json({ message: "Failed to re-extract" });
@@ -3471,7 +3472,7 @@ export async function registerRoutes(
   // ── Process Visit Audio (legacy) ──
   app.post("/api/visits/:id/process", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
 
       const visitLanguage = visit.language || "English";
@@ -3483,8 +3484,8 @@ export async function registerRoutes(
         transcript = await transcribeAudio(audio, visitLanguage);
         const estMinutes = Math.max(0.1, (audio.length * 0.75) / (16000 * 2 * 60));
         storage.createAiUsageLog({
-          doctorId: visit.doctorId,
-          visitId: req.params.id,
+          doctorId: visit.doctorId ?? req.user!.id,
+          visitId: pathParam(req.params.id),
           minutesUsed: Math.round(estMinutes * 100) / 100,
           usageType: "process_transcription",
         }).catch(err => console.error("AI usage log error:", err));
@@ -3507,18 +3508,18 @@ export async function registerRoutes(
       if (hasRealAudio) {
         updateData.audioBase64 = audio;
       }
-      await storage.updateVisit(req.params.id, updateData);
+      await storage.updateVisit(pathParam(req.params.id), updateData);
 
-      const existingMeds = await storage.getMedicinesByVisit(req.params.id);
+      const existingMeds = await storage.getMedicinesByVisit(pathParam(req.params.id));
       for (const m of existingMeds) await storage.deleteMedicine(m.id);
-      const existingTests = await storage.getTestsByVisit(req.params.id);
+      const existingTests = await storage.getTestsByVisit(pathParam(req.params.id));
       for (const t of existingTests) await storage.deleteTest(t.id);
-      const existingFollowups = await storage.getFollowupsByVisit(req.params.id);
+      const existingFollowups = await storage.getFollowupsByVisit(pathParam(req.params.id));
       for (const f of existingFollowups) await storage.deleteFollowup(f.id);
 
       for (const med of aiDraft.medicines) {
         await storage.createMedicine({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           name: med.medicine_name,
           dose: med.dosage,
           frequency: med.frequency,
@@ -3535,7 +3536,7 @@ export async function registerRoutes(
         const urgency = isObj ? (testItem as any).urgency || null : null;
         const triggerCondition = isObj ? (testItem as any).trigger_condition || null : null;
         await storage.createTest({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           name: testName,
           whenToDo,
           urgency,
@@ -3559,7 +3560,7 @@ export async function registerRoutes(
           afterDays = unit.startsWith("week") ? num * 7 : unit.startsWith("month") ? num * 30 : num;
         }
         await storage.createFollowup({
-          visitId: req.params.id,
+          visitId: pathParam(req.params.id),
           followupAfterDays: afterDays,
           followupDate: null,
           warningSigns: [],
@@ -3567,11 +3568,11 @@ export async function registerRoutes(
         });
       }
 
-      const updatedVisit = await storage.getVisit(req.params.id);
-      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${req.params.id}`);
+      const updatedVisit = await storage.getVisit(pathParam(req.params.id));
+      broadcastInvalidate("/api/visits", "/api/dashboard", `/api/visits/${pathParam(req.params.id)}`);
       res.json(updatedVisit);
 
-      autoGenerateAlternativesForVisit(req.params.id).catch(() => {});
+      autoGenerateAlternativesForVisit(pathParam(req.params.id)).catch(() => {});
     } catch (err) {
       console.error("Process error:", err);
       res.status(500).json({ message: "Failed to process visit" });
@@ -3600,10 +3601,10 @@ export async function registerRoutes(
   // ── Patient Portal ──
   app.get("/api/patients/:id/portal", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const patient = await storage.getPatient(req.params.id);
+      const patient = await storage.getPatient(pathParam(req.params.id));
       if (!patient) return res.status(404).json({ message: "Patient not found" });
 
-      const patientVisits = await storage.getVisitsByPatient(req.params.id);
+      const patientVisits = await storage.getVisitsByPatient(pathParam(req.params.id));
       const visitsWithDetails = await Promise.all(patientVisits.map(async (visit) => {
         const meds = await storage.getMedicinesByVisit(visit.id);
         const visitTests = await storage.getTestsByVisit(visit.id);
@@ -3707,7 +3708,7 @@ export async function registerRoutes(
   // ── Adherence Tracking ──
   app.get("/api/adherence/patient/:patientId", authMiddleware, requireApproved, loadPlanFeatures, requireFeature("adherenceTracking"), async (req, res) => {
     try {
-      const logs = await storage.getAdherenceLogsByPatient(req.params.patientId);
+      const logs = await storage.getAdherenceLogsByPatient(pathParam(req.params.patientId));
       res.json(logs);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch adherence logs" });
@@ -3716,7 +3717,7 @@ export async function registerRoutes(
 
   app.get("/api/adherence/visit/:visitId", authMiddleware, requireApproved, loadPlanFeatures, requireFeature("adherenceTracking"), async (req, res) => {
     try {
-      const logs = await storage.getAdherenceLogsByVisit(req.params.visitId);
+      const logs = await storage.getAdherenceLogsByVisit(pathParam(req.params.visitId));
       res.json(logs);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch adherence logs" });
@@ -3795,7 +3796,7 @@ export async function registerRoutes(
 
   app.post("/api/visits/:id/share", authMiddleware, requireApproved, async (req, res) => {
     try {
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
       if (visit.status !== "active" && !visit.approved) return res.status(400).json({ message: "Only approved care plans can be shared" });
 
@@ -3830,12 +3831,12 @@ export async function registerRoutes(
       const shareToken = await storage.getShareToken(token);
       if (!shareToken) return res.status(404).json({ message: "Invalid token" });
       if (new Date() > shareToken.expiresAt) return res.status(410).json({ message: "Token expired" });
-      if (shareToken.visitId !== req.params.id) return res.status(403).json({ message: "Token mismatch" });
+      if (shareToken.visitId !== pathParam(req.params.id)) return res.status(403).json({ message: "Token mismatch" });
 
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
 
-      const pdfBuffer = await generatePrescriptionPdf(req.params.id);
+      const pdfBuffer = await generatePrescriptionPdf(pathParam(req.params.id));
       const patient = await storage.getPatient(visit.patientId);
       const patientName = (patient?.name || "Patient").replace(/[^a-zA-Z0-9]/g, "_");
       const date = new Date().toLocaleDateString("en-IN").replace(/\//g, "-");
@@ -3858,7 +3859,7 @@ export async function registerRoutes(
         }
       }
 
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
       if (!visit.approved) return res.status(400).json({ message: "Visit must be approved first" });
 
@@ -3909,7 +3910,7 @@ export async function registerRoutes(
 
   app.get("/share/:token", async (req, res) => {
     try {
-      const shareToken = await storage.getShareToken(req.params.token);
+      const shareToken = await storage.getShareToken(pathParam(req.params.token));
       if (!shareToken) return res.status(404).send("<html><body><h1>Link not found</h1><p>This care plan link is invalid.</p></body></html>");
       if (new Date() > shareToken.expiresAt) return res.status(410).send("<html><body><h1>Link expired</h1><p>This care plan link has expired. Please request a new one from your doctor.</p></body></html>");
 
@@ -4198,7 +4199,7 @@ ${transcriptHtml ? `
         }
       }
 
-      reportData.sort((a, b) => new Date(a.visit.visitDate).getTime() - new Date(b.visit.visitDate).getTime());
+      reportData.sort((a, b) => new Date(a.visit.visitDate ?? 0).getTime() - new Date(b.visit.visitDate ?? 0).getTime());
 
       const totalVisits = reportData.length;
       const activeVisits = reportData.filter(r => r.visit.status === "active").length;
@@ -4537,10 +4538,10 @@ Output ONLY the JSON object: { "articles": [...] }`
   app.delete("/api/voice-samples/:id", authMiddleware, requireApproved, async (req, res) => {
     try {
       const user = req.user!;
-      const sample = await storage.getVoiceSample(req.params.id as string);
+      const sample = await storage.getVoiceSample(pathParam(req.params.id) as string);
       if (!sample) return res.status(404).json({ message: "Voice sample not found" });
       if (sample.doctorId !== user.id) return res.status(403).json({ message: "Not authorized" });
-      await storage.deleteVoiceSample(req.params.id as string);
+      await storage.deleteVoiceSample(pathParam(req.params.id) as string);
       res.json({ message: "Voice sample deleted" });
     } catch (err) {
       res.status(500).json({ message: "Failed to delete voice sample" });
@@ -4565,7 +4566,7 @@ Output ONLY the JSON object: { "articles": [...] }`
   app.post("/api/visits/:id/diarize", authMiddleware, requireApproved, async (req, res) => {
     try {
       const user = req.user!;
-      const visitId = req.params.id as string;
+      const visitId = pathParam(req.params.id) as string;
       const visit = await storage.getVisit(visitId);
       if (!visit) return res.status(404).json({ message: "Visit not found" });
       if (visit.doctorId !== user.id) return res.status(403).json({ message: "Not authorized" });
@@ -4599,7 +4600,7 @@ Output ONLY the JSON object: { "articles": [...] }`
   app.get("/api/visits/:id/diarized-transcript", authMiddleware, requireApproved, async (req, res) => {
     try {
       const user = req.user!;
-      const visitId = req.params.id as string;
+      const visitId = pathParam(req.params.id) as string;
       const visit = await storage.getVisit(visitId);
       if (!visit) return res.status(404).json({ message: "Visit not found" });
       if (visit.doctorId !== user.id) return res.status(403).json({ message: "Not authorized" });
@@ -4617,7 +4618,7 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.put("/api/patients/:id/history", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const patient = await storage.getPatient(req.params.id);
+      const patient = await storage.getPatient(pathParam(req.params.id));
       if (!patient) return res.status(404).json({ message: "Patient not found" });
 
       const historySchema = z.object({
@@ -4640,10 +4641,10 @@ Output ONLY the JSON object: { "articles": [...] }`
         return res.status(400).json({ message: "Invalid history data", errors: parsed.error.flatten() });
       }
 
-      const updated = await storage.updatePatientHistory(req.params.id, parsed.data);
+      const updated = await storage.updatePatientHistory(pathParam(req.params.id), parsed.data);
       if (!updated) return res.status(404).json({ message: "Patient not found" });
 
-      await storage.createAuditLog(req.user.id, "UPDATE_PATIENT_HISTORY", "patient", req.params.id, `Updated medical history for patient: ${patient.name}`);
+      await storage.createAuditLog(req.user!.id, "UPDATE_PATIENT_HISTORY", "patient", pathParam(req.params.id), `Updated medical history for patient: ${patient.name}`);
 
       res.json(updated);
     } catch (err: any) {
@@ -4654,7 +4655,7 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.get("/api/patients/:id/history", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const history = await storage.getPatientHistory(req.params.id);
+      const history = await storage.getPatientHistory(pathParam(req.params.id));
       if (!history) return res.status(404).json({ message: "Patient not found" });
       res.json(history);
     } catch (err: any) {
@@ -4665,7 +4666,7 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.get("/api/patients/:id/details-english", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const patient = await storage.getPatient(req.params.id);
+      const patient = await storage.getPatient(pathParam(req.params.id));
       if (!patient) return res.status(404).json({ message: "Patient not found" });
       if (patient.doctorId !== req.user.id) return res.status(403).json({ message: "Access denied" });
 
@@ -4729,10 +4730,10 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.get("/api/patients/:id/first-visit-check", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const patient = await storage.getPatient(req.params.id);
+      const patient = await storage.getPatient(pathParam(req.params.id));
       if (!patient) return res.status(404).json({ message: "Patient not found" });
 
-      const patientVisits = await storage.getVisitsByPatient(req.params.id);
+      const patientVisits = await storage.getVisitsByPatient(pathParam(req.params.id));
       const completedVisits = patientVisits.filter(v => v.status === "active" || v.approved);
       const isFirstVisit = completedVisits.length === 0;
 
@@ -4755,7 +4756,7 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.post("/api/medicines/:id/alternatives", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const medicine = await storage.getMedicine(req.params.id);
+      const medicine = await storage.getMedicine(pathParam(req.params.id));
       if (!medicine) return res.status(404).json({ message: "Medicine not found" });
 
       const result = await generateMedicineAlternatives(
@@ -4789,10 +4790,10 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.get("/api/visits/:id/alternatives", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const visit = await storage.getVisit(req.params.id);
+      const visit = await storage.getVisit(pathParam(req.params.id));
       if (!visit) return res.status(404).json({ message: "Visit not found" });
 
-      const alternatives = await storage.getAlternativesByVisit(req.params.id);
+      const alternatives = await storage.getAlternativesByVisit(pathParam(req.params.id));
       res.json(alternatives);
     } catch (err: any) {
       console.error("Get alternatives error:", err);
@@ -4805,13 +4806,13 @@ Output ONLY the JSON object: { "articles": [...] }`
       const { alternativeId } = req.body;
       if (!alternativeId) return res.status(400).json({ message: "alternativeId is required" });
 
-      const medicine = await storage.getMedicine(req.params.id);
+      const medicine = await storage.getMedicine(pathParam(req.params.id));
       if (!medicine) return res.status(404).json({ message: "Medicine not found" });
 
-      const selected = await storage.selectAlternative(alternativeId, req.params.id);
+      const selected = await storage.selectAlternative(alternativeId, pathParam(req.params.id));
       if (!selected) return res.status(404).json({ message: "Alternative not found" });
 
-      await storage.updateMedicine(req.params.id, {
+      await storage.updateMedicine(pathParam(req.params.id), {
         selectedAlternativeId: alternativeId,
       });
 
@@ -4819,7 +4820,7 @@ Output ONLY the JSON object: { "articles": [...] }`
         req.user.id,
         "SWAP_MEDICINE_ALTERNATIVE",
         "medicine",
-        req.params.id,
+        pathParam(req.params.id),
         `Swapped medicine "${medicine.name}" with alternative "${selected.alternativeName}" (ID: ${alternativeId})`
       );
 
@@ -4837,7 +4838,7 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.post("/api/tests/:id/report", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const test = await storage.getTestReport(req.params.id);
+      const test = await storage.getTestReport(pathParam(req.params.id));
       if (!test) return res.status(404).json({ message: "Test not found" });
 
       const reportSchema = z.object({
@@ -4856,7 +4857,7 @@ Output ONLY the JSON object: { "articles": [...] }`
       if (parsed.data.labName) updateData.labName = parsed.data.labName;
       if (parsed.data.status) updateData.status = parsed.data.status;
 
-      const updated = await storage.updateTestWithReport(req.params.id, updateData);
+      const updated = await storage.updateTestWithReport(pathParam(req.params.id), updateData);
       res.json(updated);
     } catch (err: any) {
       console.error("Upload report error:", err);
@@ -4866,7 +4867,7 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.get("/api/tests/:id/report", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const test = await storage.getTestReport(req.params.id);
+      const test = await storage.getTestReport(pathParam(req.params.id));
       if (!test) return res.status(404).json({ message: "Test not found" });
       res.json(test);
     } catch (err: any) {
@@ -4877,7 +4878,7 @@ Output ONLY the JSON object: { "articles": [...] }`
 
   app.post("/api/tests/:id/extract-values", authMiddleware, requireApproved, async (req: any, res) => {
     try {
-      const test = await storage.getTestReport(req.params.id);
+      const test = await storage.getTestReport(pathParam(req.params.id));
       if (!test) return res.status(404).json({ message: "Test not found" });
       if (!test.reportBase64) return res.status(400).json({ message: "No report uploaded for this test" });
 
@@ -4938,7 +4939,7 @@ Respond ONLY with valid JSON in this format:
 
       const extracted = JSON.parse(content);
 
-      const updated = await storage.updateTestWithReport(req.params.id, {
+      const updated = await storage.updateTestWithReport(pathParam(req.params.id), {
         reportValues: extracted.reportValues || [],
         abnormalMarkers: extracted.abnormalMarkers || [],
         status: "completed",
@@ -4956,7 +4957,7 @@ Respond ONLY with valid JSON in this format:
   // Public: Get doctor info for QR page (name, clinic, specialization)
   app.get("/api/qr/doctor/:doctorId", async (req, res) => {
     try {
-      const doctor = await storage.getUser(req.params.doctorId);
+      const doctor = await storage.getUser(pathParam(req.params.doctorId));
       if (!doctor || doctor.role !== "doctor" || doctor.status !== "approved") {
         return res.status(404).json({ message: "Doctor not found" });
       }
@@ -5080,7 +5081,7 @@ Respond ONLY with valid JSON in this format:
       if (!q || typeof q !== "string" || q.length < 2) {
         return res.json([]);
       }
-      const results = await storage.searchPatientsByDoctor(req.params.doctorId, q);
+      const results = await storage.searchPatientsByDoctor(pathParam(req.params.doctorId), q);
       res.json(results.map(p => ({
         id: p.id, name: p.name, age: p.age, gender: p.gender, phone: p.phone,
         whatsappNumber: p.whatsappNumber,
@@ -5098,7 +5099,7 @@ Respond ONLY with valid JSON in this format:
   // Public: Update patient medical history from QR flow (scoped to recently queued patients)
   app.put("/api/qr/patients/:id/history", async (req, res) => {
     try {
-      const patient = await storage.getPatient(req.params.id);
+      const patient = await storage.getPatient(pathParam(req.params.id));
       if (!patient) {
         return res.status(404).json({ message: "Patient not found" });
       }
@@ -5111,7 +5112,7 @@ Respond ONLY with valid JSON in this format:
           sanitized[key] = req.body[key].trim();
         }
       }
-      const updated = await storage.updatePatientHistory(req.params.id, sanitized);
+      const updated = await storage.updatePatientHistory(pathParam(req.params.id), sanitized);
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to update history" });
@@ -5122,7 +5123,7 @@ Respond ONLY with valid JSON in this format:
 
   app.get("/api/patient-queue", authMiddleware, async (req: any, res) => {
     try {
-      const queue = await storage.getPatientQueue(req.user.id);
+      const queue = await storage.getPatientQueue(req.user!.id);
       const toTranslate: string[] = [];
 
       for (const entry of queue as any[]) {
@@ -5178,10 +5179,10 @@ Respond ONLY with valid JSON in this format:
       if (!["waiting", "in_progress", "completed"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
-      const entry = await storage.getPatientQueueEntry(req.params.id);
+      const entry = await storage.getPatientQueueEntry(pathParam(req.params.id));
       if (!entry) return res.status(404).json({ message: "Queue entry not found" });
       if (entry.doctorId !== req.user.id) return res.status(403).json({ message: "Forbidden" });
-      const updated = await storage.updatePatientQueueStatus(req.params.id, status);
+      const updated = await storage.updatePatientQueueStatus(pathParam(req.params.id), status);
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to update status" });

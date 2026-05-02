@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { hashPassword } from "./auth";
+import type { User } from "@shared/schema";
 
 const CORRECT_PLAN_PRICES: Record<string, { monthlyPrice: number; annualPrice: number }> = {
   "Starter": { monthlyPrice: 1499, annualPrice: 14999 },
@@ -32,6 +33,81 @@ export async function seedAdminUser() {
     }
   } catch (error) {
     console.error("Error seeding admin user:", error);
+  }
+}
+
+/**
+ * If SEED_DOCTOR_EMAIL and SEED_DOCTOR_PASSWORD are set (or DOCTOR_EMAIL / DOCTOR_PASSWORD),
+ * creates an approved doctor or updates the existing account so you can sign in at /login.
+ * Optional: SEED_DOCTOR_NAME, SEED_DOCTOR_PHONE, SEED_DOCTOR_SPECIALIZATION, SEED_DOCTOR_LICENSE,
+ * SEED_DOCTOR_CLINIC, SEED_DOCTOR_CLINIC_ADDRESS, SEED_DOCTOR_EXPERIENCE, SEED_DOCTOR_QUALIFICATIONS
+ * (same names with DOCTOR_ prefix are also read as fallbacks).
+ */
+export async function seedDoctorFromEnv() {
+  const email = (process.env.SEED_DOCTOR_EMAIL || process.env.DOCTOR_EMAIL)?.trim();
+  const password = process.env.SEED_DOCTOR_PASSWORD || process.env.DOCTOR_PASSWORD;
+  if (!email || !password) return;
+
+  const pick = (a: string | undefined, b: string | undefined) => (a ?? b)?.trim();
+  const name = pick(process.env.SEED_DOCTOR_NAME, process.env.DOCTOR_NAME) || "Doctor";
+  const phone = pick(process.env.SEED_DOCTOR_PHONE, process.env.DOCTOR_PHONE) || null;
+  const specialization = pick(process.env.SEED_DOCTOR_SPECIALIZATION, process.env.DOCTOR_SPECIALIZATION) || null;
+  const licenseNumber = pick(process.env.SEED_DOCTOR_LICENSE, process.env.DOCTOR_LICENSE) || null;
+  const clinicName = pick(process.env.SEED_DOCTOR_CLINIC, process.env.DOCTOR_CLINIC) || null;
+  const clinicAddress = pick(process.env.SEED_DOCTOR_CLINIC_ADDRESS, process.env.DOCTOR_CLINIC_ADDRESS) || null;
+  const qualifications = pick(process.env.SEED_DOCTOR_QUALIFICATIONS, process.env.DOCTOR_QUALIFICATIONS) || null;
+  const expRaw = pick(process.env.SEED_DOCTOR_EXPERIENCE, process.env.DOCTOR_EXPERIENCE);
+  let experience: number | null = null;
+  if (expRaw) {
+    const n = parseInt(expRaw, 10);
+    experience = Number.isFinite(n) ? n : null;
+  }
+
+  try {
+    const passwordHash = await hashPassword(password);
+    const existing = await storage.getUserByEmail(email);
+
+    if (existing) {
+      if (existing.role === "admin") {
+        console.warn("Doctor seed skipped: email belongs to an admin account.");
+        return;
+      }
+      const patch: Partial<User> = {
+        passwordHash,
+        status: "approved",
+        name,
+        phone,
+        specialization,
+        licenseNumber,
+        clinicName,
+        clinicAddress,
+        qualifications,
+      };
+      if (expRaw !== undefined && expRaw !== "") {
+        patch.experience = experience;
+      }
+      await storage.updateUser(existing.id, patch);
+      console.log(`Doctor account synced from .env: ${email}`);
+      return;
+    }
+
+    await storage.createUser({
+      name,
+      email,
+      phone,
+      passwordHash,
+      role: "doctor",
+      status: "approved",
+      specialization,
+      licenseNumber,
+      clinicName,
+      clinicAddress,
+      experience,
+      qualifications,
+    });
+    console.log(`Doctor user created from .env: ${email}`);
+  } catch (error) {
+    console.error("Error seeding doctor from env:", error);
   }
 }
 

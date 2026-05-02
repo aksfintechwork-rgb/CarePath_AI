@@ -4,7 +4,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupWebSocket } from "./websocket";
-import { seedAdminUser, migratePlanPrices } from "./seed-admin";
+import { seedAdminUser, seedDoctorFromEnv, migratePlanPrices } from "./seed-admin";
 
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err.message);
@@ -76,6 +76,7 @@ app.use((req, res, next) => {
 
 (async () => {
   await seedAdminUser();
+  await seedDoctorFromEnv();
   await migratePlanPrices();
   await registerRoutes(httpServer, app);
 
